@@ -2,8 +2,6 @@
 
 class NursingAssistant {
     constructor() {
-        this.recognition = null;
-        this.isListening = false;
         this.selectedOptions = {
             style: 'ですます体',
             docType: '記録',
@@ -11,16 +9,12 @@ class NursingAssistant {
         };
         
         this.initializeElements();
-        this.initializeSpeechRecognition();
         this.attachEventListeners();
     }
     
     initializeElements() {
         this.inputText = document.getElementById('input-text');
         this.outputText = document.getElementById('output-text');
-        this.voiceBtn = document.getElementById('voice-input');
-        this.voiceStatus = document.getElementById('voice-status');
-        this.micIcon = document.getElementById('mic-icon');
         this.convertBtn = document.getElementById('convert-btn');
         this.copyBtn = document.getElementById('copy-btn');
         this.clearBtn = document.getElementById('clear-input');
@@ -29,82 +23,18 @@ class NursingAssistant {
         // Character limit elements
         this.charLimitSlider = document.getElementById('char-limit-slider');
         this.charLimitDisplay = document.getElementById('char-limit-display');
-        this.charCount = document.getElementById('char-count');
-        this.charLimit = document.getElementById('char-limit');
-        this.charWarning = document.getElementById('char-warning');
         
-        // Initialize character limit
-        this.currentCharLimit = 500;
+        // Initialize character limit (for output)
+        this.currentCharLimit = 1000;
     }
     
-    initializeSpeechRecognition() {
-        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-            const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
-            this.recognition = new SpeechRecognition();
-            this.recognition.continuous = true;
-            this.recognition.interimResults = true;
-            this.recognition.lang = 'ja-JP';
-            
-            this.recognition.onstart = () => {
-                this.isListening = true;
-                this.voiceStatus.textContent = '音声入力中...';
-                this.micIcon.className = 'fas fa-microphone-slash';
-                this.voiceBtn.className = 'flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors';
-            };
-            
-            this.recognition.onresult = (event) => {
-                let finalTranscript = '';
-                let interimTranscript = '';
-                
-                for (let i = event.resultIndex; i < event.results.length; i++) {
-                    const transcript = event.results[i][0].transcript;
-                    if (event.results[i].isFinal) {
-                        finalTranscript += transcript;
-                    } else {
-                        interimTranscript += transcript;
-                    }
-                }
-                
-                if (finalTranscript) {
-                    const currentText = this.inputText.value;
-                    this.inputText.value = currentText + finalTranscript + ' ';
-                    this.inputText.focus();
-                    this.inputText.setSelectionRange(this.inputText.value.length, this.inputText.value.length);
-                }
-            };
-            
-            this.recognition.onend = () => {
-                this.isListening = false;
-                this.voiceStatus.textContent = '音声入力開始';
-                this.micIcon.className = 'fas fa-microphone';
-                this.voiceBtn.className = 'flex items-center space-x-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors';
-            };
-            
-            this.recognition.onerror = (event) => {
-                console.error('Speech recognition error:', event.error);
-                this.isListening = false;
-                this.voiceStatus.textContent = '音声入力開始';
-                this.micIcon.className = 'fas fa-microphone';
-                this.voiceBtn.className = 'flex items-center space-x-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors';
-                
-                if (event.error === 'not-allowed') {
-                    alert('音声入力の許可が必要です。ブラウザの設定でマイクロフォンのアクセスを許可してください。');
-                }
-            };
-        } else {
-            this.voiceBtn.style.display = 'none';
-            console.log('Speech recognition not supported');
-        }
-    }
+    // 音声認識機能を削除
     
     attachEventListeners() {
         // Option button listeners
         this.attachOptionListeners();
         
-        // Voice input button
-        if (this.voiceBtn) {
-            this.voiceBtn.addEventListener('click', () => this.toggleVoiceInput());
-        }
+        // 音声入力機能を削除
         
         // Convert button
         if (this.convertBtn) {
@@ -126,13 +56,7 @@ class NursingAssistant {
             this.charLimitSlider.addEventListener('input', () => this.updateCharLimit());
         }
         
-        // Input text change listener for character counting
-        if (this.inputText) {
-            this.inputText.addEventListener('input', () => this.updateCharCount());
-        }
-        
-        // Initialize character count display
-        this.updateCharCount();
+        // 入力文字数カウント関連のリスナーを削除
     }
     
     attachOptionListeners() {
@@ -147,18 +71,45 @@ class NursingAssistant {
         // Document type buttons
         document.getElementById('doc-record').addEventListener('click', () => {
             this.selectOption('docType', '記録', 'doc-record', 'doc-report');
+            // 記録選択時はフォーマット選択を有効化
+            this.enableFormatSelection();
         });
         document.getElementById('doc-report').addEventListener('click', () => {
             this.selectOption('docType', '報告書', 'doc-report', 'doc-record');
+            // 報告書選択時は文章形式に固定
+            this.lockFormatToText();
         });
         
         // Format buttons
         document.getElementById('format-text').addEventListener('click', () => {
-            this.selectOption('format', '文章形式', 'format-text', 'format-soap');
+            if (this.selectedOptions.docType !== '報告書') {
+                this.selectOption('format', '文章形式', 'format-text', 'format-soap');
+            }
         });
         document.getElementById('format-soap').addEventListener('click', () => {
-            this.selectOption('format', 'SOAP形式', 'format-soap', 'format-text');
+            if (this.selectedOptions.docType !== '報告書') {
+                this.selectOption('format', 'SOAP形式', 'format-soap', 'format-text');
+            }
         });
+    }
+    
+    lockFormatToText() {
+        // 文章形式に固定
+        this.selectOption('format', '文章形式', 'format-text', 'format-soap');
+        
+        // SOAPボタンを無効化
+        const soapBtn = document.getElementById('format-soap');
+        soapBtn.style.opacity = '0.5';
+        soapBtn.style.cursor = 'not-allowed';
+        soapBtn.title = '報告書ではSOAP形式は使用できません';
+    }
+    
+    enableFormatSelection() {
+        // SOAPボタンを有効化
+        const soapBtn = document.getElementById('format-soap');
+        soapBtn.style.opacity = '1';
+        soapBtn.style.cursor = 'pointer';
+        soapBtn.title = '';
     }
     
     selectOption(optionType, value, activeId, inactiveId) {
@@ -179,11 +130,13 @@ class NursingAssistant {
         }
         
         if (this.isListening) {
-            this.recognition.stop();
+            this.stopVoiceInput();
         } else {
-            this.recognition.start();
+            this.startVoiceInput();
         }
     }
+    
+    // 音声入力関連関数を削除
     
     async convertText() {
         const inputText = this.inputText.value.trim();
@@ -193,10 +146,7 @@ class NursingAssistant {
             return;
         }
         
-        if (inputText.length > this.currentCharLimit) {
-            alert(`入力テキストが文字数制限（${this.currentCharLimit}文字）を超えています。`);
-            return;
-        }
+        // 入力文字数の制限を削除（制限なし）
         
         this.showLoading(true);
         this.convertBtn.disabled = true;
@@ -267,49 +217,17 @@ class NursingAssistant {
     updateCharLimit() {
         this.currentCharLimit = parseInt(this.charLimitSlider.value);
         this.charLimitDisplay.textContent = `${this.currentCharLimit}文字`;
-        this.charLimit.textContent = this.currentCharLimit;
-        
-        // Update textarea maxlength
-        this.inputText.setAttribute('maxlength', this.currentCharLimit);
-        
-        // Update character count display
-        this.updateCharCount();
     }
     
-    updateCharCount() {
-        const currentLength = this.inputText.value.length;
-        this.charCount.textContent = currentLength;
-        
-        // Update styling based on character count
-        const percentage = (currentLength / this.currentCharLimit) * 100;
-        
-        // Remove existing classes
-        this.charCount.classList.remove('char-counter-warning', 'char-counter-danger');
-        
-        if (percentage >= 95) {
-            this.charCount.classList.add('char-counter-danger');
-            this.charWarning.classList.remove('hidden');
-        } else if (percentage >= 80) {
-            this.charCount.classList.add('char-counter-warning');
-            this.charWarning.classList.add('hidden');
-        } else {
-            this.charWarning.classList.add('hidden');
-        }
-        
-        // Disable convert button if over limit
-        if (currentLength > this.currentCharLimit) {
-            this.convertBtn.disabled = true;
-        } else {
-            this.convertBtn.disabled = false;
-        }
-    }
+    // updateCharCount関数を削除（入力文字数カウント不要）
     
     clearInput() {
-        this.inputText.value = '';
-        this.outputText.innerHTML = '<div class=\"text-pink-400 italic\">整形された文章がここに表示されます...</div>';
-        this.copyBtn.disabled = true;
-        this.inputText.focus();
-        this.updateCharCount();
+        if (confirm('入力内容をクリアしますか？')) {
+            this.inputText.value = '';
+            this.outputText.innerHTML = '<div class=\"text-pink-400 italic\">整形された文章がここに表示されます...</div>';
+            this.copyBtn.disabled = true;
+            this.inputText.focus();
+        }
     }
     
     showLoading(show) {
