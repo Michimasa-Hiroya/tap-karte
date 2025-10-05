@@ -23,6 +23,20 @@ app.post('/api/convert', async (c) => {
       return c.json({ success: false, error: '入力テキストが空です' }, 400)
     }
     
+    // 入力テキストの長さ制限
+    if (text.length > 2000) {
+      return c.json({ success: false, error: '入力テキストが長すぎます（2000文字以内でお願いします）' }, 400)
+    }
+    
+    // オプション値の検証
+    const validStyles = ['ですます体', 'だ・である体']
+    const validDocTypes = ['記録', '報告書']
+    const validFormats = ['文章形式', 'SOAP形式']
+    
+    if (!validStyles.includes(style) || !validDocTypes.includes(docType) || !validFormats.includes(format)) {
+      return c.json({ success: false, error: '無効なオプションが選択されています' }, 400)
+    }
+    
     const apiKey = c.env?.CLAUDE_API_KEY
     if (!apiKey) {
       return c.json({ success: false, error: 'Claude APIキーが設定されていません' }, 500)
@@ -45,6 +59,13 @@ app.post('/api/convert', async (c) => {
 ・フォーマットは「${format}」で出力してください。
 ${format === 'SOAP形式' ? '  - 「SOAP形式」の場合、S・O・A・Pの各項目に情報を適切に分類し、必ず項目ごとに改行して見出し（S: , O: , A: , P: ）を付けてください。情報が不足している項目は「特記事項なし」と記載してください。' : ''}
 
+# 医療記録作成の重要な注意点
+・バイタルサインは正確な医療用語と単位で記載（例：血圧150/88mmHg、脈拍78/分、体温36.8℃、SpO2 96%）
+・緊急性の高い状況では簡潔で要点を絞った表現を使用
+・認知症ケアでは「音楽的関わり」「非薬物的アプローチ」など適切な専門用語を使用
+・数値データは元の表記を尊重し、正確に記載
+・時系列を明確にし、因果関係を論理的に記述
+
 # 入力テキスト
 ${text}
 
@@ -61,19 +82,41 @@ ${text}
       }]
     })
     
-    const convertedText = message.content[0]?.type === 'text' ? message.content[0].text : '変換に失敗しました'
+    if (!message.content || message.content.length === 0) {
+      throw new Error('Claude APIからの応答が空です')
+    }
+    
+    const convertedText = message.content[0]?.type === 'text' ? message.content[0].text : null
+    
+    if (!convertedText) {
+      throw new Error('Claude APIからテキストを取得できませんでした')
+    }
     
     return c.json({
       success: true,
-      convertedText: convertedText,
+      convertedText: convertedText.trim(),
       options: { style, docType, format }
     })
     
   } catch (error) {
     console.error('Claude API error:', error)
+    
+    // API固有のエラーメッセージを判定
+    let errorMessage = 'AI変換サービスでエラーが発生しました。しばらく時間をおいて再度お試しください。'
+    
+    if (error instanceof Error) {
+      if (error.message.includes('API key')) {
+        errorMessage = 'APIキーの設定に問題があります。管理者にお問い合わせください。'
+      } else if (error.message.includes('rate limit')) {
+        errorMessage = 'アクセス数が上限に達しました。しばらく時間をおいてからお試しください。'
+      } else if (error.message.includes('timeout')) {
+        errorMessage = '処理時間が長すぎるため、入力テキストを短くしてお試しください。'
+      }
+    }
+    
     return c.json({ 
       success: false, 
-      error: 'AI変換サービスでエラーが発生しました。しばらく時間をおいて再度お試しください。' 
+      error: errorMessage
     }, 500)
   }
 })
