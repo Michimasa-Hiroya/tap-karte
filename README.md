@@ -1,21 +1,140 @@
-```txt
+# 看護記録アシスタント
+
+## プロジェクト概要
+- **名前**: 看護記録アシスタント
+- **目的**: 訪問看護師の記録業務効率化を支援するWebアプリケーション
+- **機能**: 口頭メモや殴り書きを、整った看護記録・報告書に変換
+
+## 現在実装済み機能
+
+### ✅ 完了した機能
+1. **DeepL風直感的UI**
+   - 左右2分割レイアウト（入力エリア/出力エリア）
+   - レスポンシブ対応、モダンなデザイン
+   - Tailwind CSS + Font Awesome アイコン使用
+
+2. **オプション選択機能**
+   - 文体選択: ですます体 / だ・である体
+   - ドキュメント種別: 記録 / 報告書
+   - フォーマット: 文章形式 / SOAP形式
+
+3. **音声入力機能**
+   - Web Speech API による音声認識
+   - リアルタイム音声→テキスト変換
+   - 日本語対応、継続入力サポート
+
+4. **Claude API連携**
+   - Anthropic Claude API使用
+   - 20年経験の訪問看護師としてのプロンプト
+   - 誤字脱字自動修正
+   - 選択オプションに応じた文体・形式変換
+
+5. **SOAP形式出力**
+   - S (Subjective): 主観的情報
+   - O (Objective): 客観的データ
+   - A (Assessment): 評価・アセスメント
+   - P (Plan): 看護計画・目標
+
+6. **ユーザビリティ機能**
+   - ワンクリックコピー機能
+   - 入力クリア機能
+   - リアルタイム処理状況表示
+   - エラーハンドリング
+
+## 機能別エンドポイント
+
+### API エンドポイント
+- **GET `/`** - メインUI表示
+- **POST `/api/convert`** - テキスト変換API
+  - パラメータ:
+    - `text`: 入力テキスト
+    - `style`: 文体（"ですます体" / "だ・である体"）
+    - `docType`: 種別（"記録" / "報告書"）
+    - `format`: 形式（"文章形式" / "SOAP形式"）
+
+### フロントエンド機能
+- **音声入力**: マイクボタンクリックで音声認識開始/停止
+- **リアルタイム変換**: 入力後「変換」ボタンで即座にAI処理
+- **コピー機能**: 出力エリアの結果をクリップボードに保存
+
+## データアーキテクチャ
+- **データモデル**: REST API による単発リクエスト/レスポンス
+- **ストレージサービス**: 状態はフロントエンドで管理（セッションレス）
+- **データフロー**: 入力→オプション選択→Claude API→整形出力
+
+## ユーザーガイド
+
+### 基本的な使用手順
+1. 左側の入力エリアに口頭メモや殴り書きを入力
+2. 音声入力を使う場合は赤いマイクボタンをクリック
+3. 上部のオプションで文体・種別・形式を選択
+4. 「変換」ボタンをクリック
+5. 右側に整形された文章が表示される
+6. 「コピー」ボタンで結果をクリップボードに保存
+
+### 音声入力の使い方
+- 初回使用時はマイクロフォンへのアクセス許可が必要
+- マイクボタンクリックで録音開始、再クリックで停止
+- 日本語音声認識に対応、リアルタイムでテキスト化
+
+### SOAP形式について
+- 医療・看護記録の標準的な構造化記録方式
+- 入力内容を自動的に4つのカテゴリに分類・整理
+- 他職種との情報共有に最適化された形式
+
+## URL
+- **開発サーバー**: https://3000-ixy1wtk4hmb4mowt6eshr-6532622b.e2b.dev
+- **GitHub**: （未設定）
+
+## デプロイメント
+- **プラットフォーム**: Cloudflare Pages 対応
+- **ステータス**: ✅ 開発環境で動作中
+- **技術スタック**: Hono + TypeScript + Tailwind CSS + Claude API
+- **最終更新**: 2025-10-05
+
+## 開発・運用情報
+
+### 必要な環境変数
+```bash
+CLAUDE_API_KEY=your_claude_api_key_here
+```
+
+### ローカル開発
+```bash
+# 依存関係インストール
 npm install
-npm run dev
+
+# ビルド
+npm run build
+
+# 開発サーバー起動（PM2使用）
+pm2 start ecosystem.config.cjs
+
+# テスト
+curl http://localhost:3000
 ```
 
-```txt
-npm run deploy
+### 本番デプロイ
+```bash
+# Cloudflare Pages へのデプロイ
+npm run deploy:prod
+
+# 環境変数設定
+npx wrangler pages secret put CLAUDE_API_KEY
 ```
 
-[For generating/synchronizing types based on your Worker configuration run](https://developers.cloudflare.com/workers/wrangler/commands/#types):
+## 今後の拡張予定
+- [ ] ユーザー認証・ログイン機能
+- [ ] 記録履歴の保存・管理
+- [ ] テンプレート機能
+- [ ] 印刷最適化
+- [ ] オフライン対応
+- [ ] 多言語サポート
 
-```txt
-npm run cf-typegen
-```
-
-Pass the `CloudflareBindings` as generics when instantiation `Hono`:
-
-```ts
-// src/index.ts
-const app = new Hono<{ Bindings: CloudflareBindings }>()
-```
+## 技術仕様
+- **フロントエンド**: HTML5, CSS3, JavaScript (ES6+), Tailwind CSS
+- **バックエンド**: Hono (Web Framework)
+- **API**: Anthropic Claude API
+- **デプロイ**: Cloudflare Workers/Pages
+- **音声認識**: Web Speech API
+- **ブラウザ要件**: モダンブラウザ（Chrome, Firefox, Safari, Edge）
