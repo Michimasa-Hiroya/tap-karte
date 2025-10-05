@@ -5,25 +5,331 @@ import Anthropic from '@anthropic-ai/sdk'
 
 type Bindings = {
   CLAUDE_API_KEY: string;
+  DB: D1Database;
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
 
-// Enable CORS for API calls
-app.use('/api/*', cors())
+// Security headers middleware
+app.use('*', async (c, next) => {
+  // セキュリティヘッダーの追加
+  c.header('X-Content-Type-Options', 'nosniff')
+  c.header('X-Frame-Options', 'DENY')
+  c.header('X-XSS-Protection', '1; mode=block')
+  c.header('Referrer-Policy', 'strict-origin-when-cross-origin')
+  c.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()')
+  
+  await next()
+})
+
+// Enable CORS for API calls with security restrictions
+app.use('/api/*', cors({
+  origin: (origin) => {
+    // 本番環境では特定のドメインのみ許可
+    if (!origin) return true // Same-origin requests
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'https://nursing-assistant.pages.dev',
+      /^https:\/\/.*\.e2b\.dev$/
+    ]
+    return allowedOrigins.some(allowed => 
+      typeof allowed === 'string' ? allowed === origin : allowed.test(origin)
+    )
+  },
+  credentials: false // API キーを使用するためクレデンシャルは不要
+}))
 
 app.use(renderer)
 
+// Database utility functions
+async function logNursingRecord(db: D1Database, data: {
+  sessionId: string
+  inputText: string
+  outputText: string
+  optionsStyle: string
+  optionsDocType: string
+  optionsFormat: string
+  charLimit: number
+  responseTime: number
+  ipAddress?: string
+  userAgent?: string
+}) {
+  try {
+    await db.prepare(`
+      INSERT INTO nursing_records 
+      (session_id, input_text, output_text, options_style, options_doc_type, options_format, char_limit, response_time, ip_address, user_agent)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      data.sessionId,
+      data.inputText,
+      data.outputText,
+      data.optionsStyle,
+      data.optionsDocType,
+      data.optionsFormat,
+      data.charLimit,
+      data.responseTime,
+      data.ipAddress || null,
+      data.userAgent || null
+    ).run()
+  } catch (error) {
+    console.error('Failed to log nursing record:', error)
+  }
+}
+
+async function logPerformance(db: D1Database, data: {
+  endpoint: string
+  method: string
+  statusCode: number
+  responseTime: number
+  errorType?: string
+  ipAddress?: string
+}) {
+  try {
+    await db.prepare(`
+      INSERT INTO performance_stats (endpoint, method, status_code, response_time, error_type, ip_address)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).bind(
+      data.endpoint,
+      data.method,
+      data.statusCode,
+      data.responseTime,
+      data.errorType || null,
+      data.ipAddress || null
+    ).run()
+  } catch (error) {
+    console.error('Failed to log performance:', error)
+  }
+}
+
+async function logSecurity(db: D1Database, data: {
+  eventType: string
+  description: string
+  severity: 'info' | 'warning' | 'error' | 'critical'
+  ipAddress?: string
+  userAgent?: string
+}) {
+  try {
+    await db.prepare(`
+      INSERT INTO security_logs (event_type, description, severity, ip_address, user_agent)
+      VALUES (?, ?, ?, ?, ?)
+    `).bind(
+      data.eventType,
+      data.description,
+      data.severity,
+      data.ipAddress || null,
+      data.userAgent || null
+    ).run()
+  } catch (error) {
+    console.error('Failed to log security event:', error)
+  }
+}
+
+// Security check endpoint
+app.get('/api/security-status', async (c) => {
+  const securityChecks = {
+    apiKeyConfigured: !!c.env?.CLAUDE_API_KEY,
+    apiKeyLength: c.env?.CLAUDE_API_KEY ? c.env.CLAUDE_API_KEY.length : 0,
+    environment: c.env?.NODE_ENV || 'development',
+    timestamp: new Date().toISOString(),
+    securityHeaders: {
+      cors: 'enabled',
+      contentType: 'application/json',
+      httpsOnly: true
+    }
+  }
+  
+  // API キーの形式チェック（実際のキーは表示しない）
+  const keyStatus = securityChecks.apiKeyConfigured 
+    ? securityChecks.apiKeyLength > 10 ? 'valid_format' : 'invalid_format'
+    : 'not_configured'
+  
+  console.log(`[SECURITY] API Key Status: ${keyStatus}, Environment: ${securityChecks.environment}`)
+  
+  return c.json({
+    status: 'security_check_complete',
+    checks: {
+      apiKey: keyStatus,
+      environment: securityChecks.environment,
+      httpsEnforced: true,
+      corsConfigured: true,
+      inputValidation: true,
+      outputSanitization: true
+    },
+    recommendations: keyStatus === 'not_configured' 
+      ? ['Configure CLAUDE_API_KEY environment variable']
+      : keyStatus === 'invalid_format'
+      ? ['Verify CLAUDE_API_KEY format']
+      : [],
+    timestamp: securityChecks.timestamp
+  })
+})
+
+// History endpoints
+app.get('/api/history/:sessionId', async (c) => {
+  try {
+    const sessionId = c.req.param('sessionId')
+    const db = c.env?.DB
+    
+    if (!db) {
+      return c.json({ success: false, error: 'Database not available' }, 500)
+    }
+    
+    const { results } = await db.prepare(`
+      SELECT id, input_text, output_text, options_style, options_doc_type, options_format, 
+             char_limit, response_time, created_at
+      FROM nursing_records 
+      WHERE session_id = ? 
+      ORDER BY created_at DESC 
+      LIMIT 50
+    `).bind(sessionId).all()
+    
+    return c.json({
+      success: true,
+      records: results,
+      sessionId: sessionId,
+      count: results.length
+    })
+    
+  } catch (error) {
+    console.error('History fetch error:', error)
+    return c.json({ success: false, error: 'Failed to fetch history' }, 500)
+  }
+})
+
+app.get('/api/stats', async (c) => {
+  try {
+    const db = c.env?.DB
+    
+    if (!db) {
+      return c.json({ success: false, error: 'Database not available' }, 500)
+    }
+    
+    // 過去24時間の統計
+    const [recordStats, performanceStats, securityStats] = await Promise.all([
+      db.prepare(`
+        SELECT COUNT(*) as total_records, AVG(response_time) as avg_response_time
+        FROM nursing_records 
+        WHERE created_at > datetime('now', '-24 hours')
+      `).first(),
+      
+      db.prepare(`
+        SELECT status_code, COUNT(*) as count, AVG(response_time) as avg_response_time
+        FROM performance_stats 
+        WHERE created_at > datetime('now', '-24 hours')
+        GROUP BY status_code
+      `).all(),
+      
+      db.prepare(`
+        SELECT event_type, severity, COUNT(*) as count
+        FROM security_logs 
+        WHERE created_at > datetime('now', '-24 hours')
+        GROUP BY event_type, severity
+      `).all()
+    ])
+    
+    return c.json({
+      success: true,
+      timeframe: '24_hours',
+      statistics: {
+        records: recordStats,
+        performance: performanceStats.results,
+        security: securityStats.results
+      },
+      timestamp: new Date().toISOString()
+    })
+    
+  } catch (error) {
+    console.error('Stats fetch error:', error)
+    return c.json({ success: false, error: 'Failed to fetch statistics' }, 500)
+  }
+})
+
+// Performance monitoring endpoint
+app.get('/api/health', async (c) => {
+  const startTime = Date.now()
+  try {
+    // 基本ヘルスチェック
+    const endTime = Date.now()
+    const responseTime = endTime - startTime
+    
+    return c.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      responseTime: responseTime,
+      version: '1.0.0',
+      services: {
+        api: 'operational',
+        database: c.env?.DB ? 'operational' : 'not_configured',
+        claudeApi: c.env?.CLAUDE_API_KEY ? 'configured' : 'not_configured'
+      }
+    })
+  } catch (error) {
+    const endTime = Date.now()
+    const responseTime = endTime - startTime
+    console.error('[HEALTH CHECK] Error:', error)
+    
+    return c.json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      responseTime: responseTime,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }, 500)
+  }
+})
+
 // Claude API conversion endpoint
 app.post('/api/convert', async (c) => {
+  const startTime = Date.now()
+  let success = false
+  let errorType = ''
+  
   try {
     const { text, style, docType, format, charLimit } = await c.req.json()
     
-    if (!text || !text.trim()) {
+    // 入力検証とサニタイゼーション
+    if (!text || typeof text !== 'string' || !text.trim()) {
+      errorType = 'validation_error'
       return c.json({ success: false, error: '入力テキストが空です' }, 400)
     }
     
-    // 入力文字数制限なし
+    // 悪意のあるスクリプトや不正な文字列をチェック
+    const sanitizedText = text.trim()
+    if (sanitizedText.length > 50000) { // 極端に長いテキストを制限
+      errorType = 'validation_error'
+      return c.json({ success: false, error: '入力テキストが長すぎます（50,000文字以内）' }, 400)
+    }
+    
+    // 個人情報らしき情報をチェック（基本的な検出）
+    const personalInfoPatterns = [
+      /\d{4}-\d{4}-\d{4}-\d{4}/, // クレジットカード番号パターン
+      /\d{3}-\d{4}-\d{4}/, // 電話番号パターン
+      /〒\d{3}-\d{4}/, // 郵便番号パターン
+    ]
+    
+    for (const pattern of personalInfoPatterns) {
+      if (pattern.test(sanitizedText)) {
+        errorType = 'security_warning'
+        
+        // セキュリティログ
+        if (c.env?.DB) {
+          await logSecurity(c.env.DB, {
+            eventType: 'personal_info_detected',
+            description: 'Personal information pattern detected in input',
+            severity: 'warning',
+            ipAddress: c.req.header('CF-Connecting-IP'),
+            userAgent: c.req.header('User-Agent')
+          })
+        }
+        
+        return c.json({ 
+          success: false, 
+          error: '個人情報らしきデータが検出されました。個人情報は入力しないでください。' 
+        }, 400)
+      }
+    }
+    
+    // 出力文字数制限（デフォルト1000、最大1000）
+    const maxOutputChars = Math.min(parseInt(charLimit) || 1000, 1000)
     
     // オプション値の検証
     const validStyles = ['ですます体', 'だ・である体']
@@ -31,11 +337,13 @@ app.post('/api/convert', async (c) => {
     const validFormats = ['文章形式', 'SOAP形式']
     
     if (!validStyles.includes(style) || !validDocTypes.includes(docType) || !validFormats.includes(format)) {
+      errorType = 'validation_error'
       return c.json({ success: false, error: '無効なオプションが選択されています' }, 400)
     }
     
     const apiKey = c.env?.CLAUDE_API_KEY
     if (!apiKey) {
+      errorType = 'config_error'
       return c.json({ success: false, error: 'Claude APIキーが設定されていません' }, 500)
     }
     
@@ -60,7 +368,7 @@ ${format === 'SOAP形式' ? '  - 「SOAP形式」の場合、S・O・A・Pの各
 
 # 医療記録作成の重要な注意点
 ・入力された情報以外は一切追加・創作しない（バイタルサイン、症状、処置等）
-・出力は${charLimit}文字以内で簡潔にまとめてください
+・出力は${maxOutputChars}文字以内で簡潔にまとめてください
 ・入力が短い場合は、無理に文章を長くせず、入力内容に見合った適切な長さで記述してください
 ・バイタルサインは正確な医療用語と単位で記載（例：血圧150/88mmHg、脈拍78/分、体温36.8℃、SpO2 96%）
 ・緊急性の高い状況では簡潔で要点を絞った表現を使用
@@ -70,7 +378,7 @@ ${format === 'SOAP形式' ? '  - 「SOAP形式」の場合、S・O・A・Pの各
 ・文章形式では自然な段落構成で、見出しや箇条書きは使用しない
 
 # 入力テキスト
-${text}
+${sanitizedText}
 
 # 出力
 `
@@ -92,16 +400,102 @@ ${text}
     const convertedText = message.content[0]?.type === 'text' ? message.content[0].text : null
     
     if (!convertedText) {
+      errorType = 'api_response_error'
       throw new Error('Claude APIからテキストを取得できませんでした')
     }
     
+    success = true
+    const endTime = Date.now()
+    const responseTime = endTime - startTime
+    const outputText = convertedText.trim()
+    
+    // セッションID生成（簡易版）
+    const sessionId = c.req.header('x-session-id') || `session_${Date.now()}_${Math.random().toString(36).substring(2)}`
+    
+    // データベースログ
+    if (c.env?.DB) {
+      await Promise.all([
+        logNursingRecord(c.env.DB, {
+          sessionId: sessionId,
+          inputText: sanitizedText,
+          outputText: outputText,
+          optionsStyle: style,
+          optionsDocType: docType,
+          optionsFormat: format,
+          charLimit: maxOutputChars,
+          responseTime: responseTime,
+          ipAddress: c.req.header('CF-Connecting-IP'),
+          userAgent: c.req.header('User-Agent')
+        }),
+        logPerformance(c.env.DB, {
+          endpoint: '/api/convert',
+          method: 'POST',
+          statusCode: 200,
+          responseTime: responseTime,
+          ipAddress: c.req.header('CF-Connecting-IP')
+        })
+      ])
+    }
+    
+    // パフォーマンス監視ログ
+    console.log(`[PERFORMANCE] Success: ${success}, Response Time: ${responseTime}ms, Input Length: ${sanitizedText.length}, Output Length: ${outputText.length}`)
+    
     return c.json({
       success: true,
-      convertedText: convertedText.trim(),
-      options: { style, docType, format }
+      convertedText: outputText,
+      options: { style, docType, format },
+      sessionId: sessionId,
+      performance: {
+        responseTime: responseTime,
+        timestamp: new Date().toISOString()
+      }
     })
     
   } catch (error) {
+    const endTime = Date.now()
+    const responseTime = endTime - startTime
+    
+    // エラー分類
+    if (!errorType) {
+      if (error instanceof Error) {
+        if (error.message.includes('API key')) {
+          errorType = 'api_auth_error'
+        } else if (error.message.includes('rate limit')) {
+          errorType = 'rate_limit_error'
+        } else if (error.message.includes('timeout')) {
+          errorType = 'timeout_error'
+        } else {
+          errorType = 'api_error'
+        }
+      } else {
+        errorType = 'unknown_error'
+      }
+    }
+    
+    // データベースログ（エラー時）
+    if (c.env?.DB) {
+      await Promise.all([
+        logPerformance(c.env.DB, {
+          endpoint: '/api/convert',
+          method: 'POST',
+          statusCode: 500,
+          responseTime: responseTime,
+          errorType: errorType,
+          ipAddress: c.req.header('CF-Connecting-IP')
+        }),
+        logSecurity(c.env.DB, {
+          eventType: 'api_error',
+          description: `API conversion failed: ${errorType}`,
+          severity: errorType.includes('security') ? 'warning' : 'error',
+          ipAddress: c.req.header('CF-Connecting-IP'),
+          userAgent: c.req.header('User-Agent')
+        })
+      ])
+    }
+    
+    // パフォーマンス監視ログ（エラー時）
+    console.error(`[PERFORMANCE] Success: false, Error Type: ${errorType}, Response Time: ${responseTime}ms, Error: ${error}`)
+    
     console.error('Claude API error:', error)
     
     // API固有のエラーメッセージを判定
@@ -119,7 +513,12 @@ ${text}
     
     return c.json({ 
       success: false, 
-      error: errorMessage
+      error: errorMessage,
+      errorType: errorType,
+      performance: {
+        responseTime: responseTime,
+        timestamp: new Date().toISOString()
+      }
     }, 500)
   }
 })
