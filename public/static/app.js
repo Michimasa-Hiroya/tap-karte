@@ -205,7 +205,7 @@ class NursingAssistant {
             
         } catch (error) {
             console.error('Conversion error:', error);
-            this.outputText.innerHTML = `<div class=\"text-red-500\">エラーが発生しました: ${error.message}</div>`;
+            this.outputText.innerHTML = `<div class=\"text-pink-700\">エラーが発生しました: ${error.message}</div>`;
             this.copyBtn.disabled = true;
         } finally {
             this.showLoading(false);
@@ -225,11 +225,11 @@ class NursingAssistant {
             // Show temporary success message
             const originalText = this.copyBtn.innerHTML;
             this.copyBtn.innerHTML = '<i class=\"fas fa-check\"></i><span>コピー完了</span>';
-            this.copyBtn.className = 'flex items-center space-x-2 px-4 py-2 bg-green-700 text-white rounded-lg transition-colors';
+            this.copyBtn.className = 'flex items-center space-x-2 px-4 py-2 bg-pink-700 text-white rounded-lg transition-colors';
             
             setTimeout(() => {
                 this.copyBtn.innerHTML = originalText;
-                this.copyBtn.className = 'flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors';
+                this.copyBtn.className = 'flex items-center space-x-2 px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors';
             }, 2000);
             
         }).catch(err => {
@@ -240,7 +240,7 @@ class NursingAssistant {
     
     clearInput() {
         this.inputText.value = '';
-        this.outputText.innerHTML = '<div class=\"text-gray-400 italic\">整形された文章がここに表示されます...</div>';
+        this.outputText.innerHTML = '<div class=\"text-pink-400 italic\">整形された文章がここに表示されます...</div>';
         this.copyBtn.disabled = true;
         this.inputText.focus();
     }

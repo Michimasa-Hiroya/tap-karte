@@ -52,7 +52,7 @@ ${text}
 `
     
     const message = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-3-haiku-20240307',
       max_tokens: 2000,
       temperature: 0.3,
       messages: [{
@@ -80,32 +80,32 @@ ${text}
 
 app.get('/', (c) => {
   return c.render(
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-pink-50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
+      <header className="bg-pink-100 shadow-sm border-b border-pink-200">
         <div className="max-w-7xl mx-auto px-4 py-6">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-            <i className="fas fa-stethoscope text-blue-600 mr-3"></i>
+          <h1 className="text-3xl font-bold text-pink-800 flex items-center">
+            <i className="fas fa-stethoscope text-pink-600 mr-3"></i>
             看護記録アシスタント
           </h1>
-          <p className="text-gray-600 mt-2">口頭メモや殴り書きを、整った看護記録・報告書に変換</p>
+          <p className="text-pink-700 mt-2">口頭メモや簡単なメモを、整った看護記録・報告書に変換</p>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden border border-pink-200">
           {/* Options Bar */}
-          <div className="bg-gray-100 px-6 py-4 border-b border-gray-200">
+          <div className="bg-pink-50 px-6 py-4 border-b border-pink-200">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Style Selection */}
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700">文体</label>
+                <label className="text-sm font-semibold text-pink-800">文体</label>
                 <div className="flex space-x-2">
-                  <button id="style-polite" className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors">
+                  <button id="style-polite" className="px-4 py-2 bg-pink-600 text-white rounded-md text-sm font-medium hover:bg-pink-700 transition-colors">
                     ですます体
                   </button>
-                  <button id="style-plain" className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
+                  <button id="style-plain" className="px-4 py-2 bg-pink-100 text-pink-700 rounded-md text-sm font-medium hover:bg-pink-200 transition-colors">
                     だ・である体
                   </button>
                 </div>
@@ -113,12 +113,12 @@ app.get('/', (c) => {
 
               {/* Document Type Selection */}
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700">ドキュメント種別</label>
+                <label className="text-sm font-semibold text-pink-800">ドキュメント種別</label>
                 <div className="flex space-x-2">
-                  <button id="doc-record" className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors">
+                  <button id="doc-record" className="px-4 py-2 bg-pink-600 text-white rounded-md text-sm font-medium hover:bg-pink-700 transition-colors">
                     記録
                   </button>
-                  <button id="doc-report" className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
+                  <button id="doc-report" className="px-4 py-2 bg-pink-100 text-pink-700 rounded-md text-sm font-medium hover:bg-pink-200 transition-colors">
                     報告書
                   </button>
                 </div>
@@ -126,12 +126,12 @@ app.get('/', (c) => {
 
               {/* Format Selection */}
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700">フォーマット</label>
+                <label className="text-sm font-semibold text-pink-800">フォーマット</label>
                 <div className="flex space-x-2">
-                  <button id="format-text" className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors">
+                  <button id="format-text" className="px-4 py-2 bg-pink-600 text-white rounded-md text-sm font-medium hover:bg-pink-700 transition-colors">
                     文章形式
                   </button>
-                  <button id="format-soap" className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
+                  <button id="format-soap" className="px-4 py-2 bg-pink-100 text-pink-700 rounded-md text-sm font-medium hover:bg-pink-200 transition-colors">
                     SOAP形式
                   </button>
                 </div>
@@ -142,21 +142,21 @@ app.get('/', (c) => {
           {/* Input/Output Area */}
           <div className="grid grid-cols-1 lg:grid-cols-2">
             {/* Input Area */}
-            <div className="p-6 border-r border-gray-200">
+            <div className="p-6 border-r border-pink-200">
               <div className="mb-4">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">入力</label>
+                <label className="block text-sm font-semibold text-pink-800 mb-2">入力</label>
                 <textarea 
                   id="input-text"
-                  className="w-full h-80 p-4 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="口頭メモや殴り書きのテキストをここに入力してください..."
+                  className="w-full h-80 p-4 border border-pink-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                  placeholder="口頭メモや簡単なメモをここに入力してください..."
                 ></textarea>
               </div>
               <div className="flex justify-between items-center">
-                <button id="voice-input" className="flex items-center space-x-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
+                <button id="voice-input" className="flex items-center space-x-2 px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors">
                   <i id="mic-icon" className="fas fa-microphone"></i>
                   <span id="voice-status">音声入力開始</span>
                 </button>
-                <button id="clear-input" className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                <button id="clear-input" className="px-4 py-2 bg-pink-400 text-white rounded-lg hover:bg-pink-500 transition-colors">
                   クリア
                 </button>
               </div>
@@ -165,25 +165,25 @@ app.get('/', (c) => {
             {/* Output Area */}
             <div className="p-6">
               <div className="mb-4">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">出力</label>
+                <label className="block text-sm font-semibold text-pink-800 mb-2">出力</label>
                 <div 
                   id="output-text"
-                  className="w-full h-80 p-4 bg-gray-50 border border-gray-300 rounded-lg overflow-y-auto whitespace-pre-wrap"
+                  className="w-full h-80 p-4 bg-pink-25 border border-pink-300 rounded-lg overflow-y-auto whitespace-pre-wrap"
                 >
-                  <div className="text-gray-400 italic">整形された文章がここに表示されます...</div>
+                  <div className="text-pink-400 italic">整形された文章がここに表示されます...</div>
                 </div>
               </div>
               <div className="flex justify-between items-center">
                 <div className="flex space-x-2">
-                  <button id="convert-btn" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                  <button id="convert-btn" className="px-6 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                     変換
                   </button>
-                  <div id="loading" className="hidden flex items-center space-x-2 text-gray-600">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  <div id="loading" className="hidden flex items-center space-x-2 text-pink-600">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-pink-600"></div>
                     <span>処理中...</span>
                   </div>
                 </div>
-                <button id="copy-btn" className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                <button id="copy-btn" className="flex items-center space-x-2 px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
                   <i className="fas fa-copy"></i>
                   <span>コピー</span>
                 </button>
@@ -193,10 +193,10 @@ app.get('/', (c) => {
         </div>
 
         {/* Usage Instructions */}
-        <div className="mt-8 bg-blue-50 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-blue-900 mb-3">使い方</h3>
-          <ol className="list-decimal list-inside space-y-2 text-blue-800">
-            <li>左側の入力エリアに口頭メモや殴り書きのテキストを入力してください</li>
+        <div className="mt-8 bg-pink-50 rounded-lg p-6 border border-pink-200">
+          <h3 className="text-lg font-semibold text-pink-900 mb-3">使い方</h3>
+          <ol className="list-decimal list-inside space-y-2 text-pink-800">
+            <li>左側の入力エリアに口頭メモや簡単なメモを入力してください</li>
             <li>音声入力を使用する場合は「音声入力開始」ボタンをクリックしてください</li>
             <li>文体、ドキュメント種別、フォーマットを選択してください</li>
             <li>「変換」ボタンをクリックして整形された文章を取得してください</li>
