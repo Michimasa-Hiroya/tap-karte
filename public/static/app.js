@@ -173,6 +173,11 @@ class NursingAssistant {
             return;
         }
         
+        if (inputText.length > this.currentCharLimit) {
+            alert(`入力テキストが文字数制限（${this.currentCharLimit}文字）を超えています。`);
+            return;
+        }
+        
         this.showLoading(true);
         this.convertBtn.disabled = true;
         
@@ -186,7 +191,8 @@ class NursingAssistant {
                     text: inputText,
                     style: this.selectedOptions.style,
                     docType: this.selectedOptions.docType,
-                    format: this.selectedOptions.format
+                    format: this.selectedOptions.format,
+                    charLimit: this.currentCharLimit
                 })
             });
             
@@ -238,11 +244,52 @@ class NursingAssistant {
         });
     }
     
+    updateCharLimit() {
+        this.currentCharLimit = parseInt(this.charLimitSlider.value);
+        this.charLimitDisplay.textContent = `${this.currentCharLimit}文字`;
+        this.charLimit.textContent = this.currentCharLimit;
+        
+        // Update textarea maxlength
+        this.inputText.setAttribute('maxlength', this.currentCharLimit);
+        
+        // Update character count display
+        this.updateCharCount();
+    }
+    
+    updateCharCount() {
+        const currentLength = this.inputText.value.length;
+        this.charCount.textContent = currentLength;
+        
+        // Update styling based on character count
+        const percentage = (currentLength / this.currentCharLimit) * 100;
+        
+        // Remove existing classes
+        this.charCount.classList.remove('char-counter-warning', 'char-counter-danger');
+        
+        if (percentage >= 95) {
+            this.charCount.classList.add('char-counter-danger');
+            this.charWarning.classList.remove('hidden');
+        } else if (percentage >= 80) {
+            this.charCount.classList.add('char-counter-warning');
+            this.charWarning.classList.add('hidden');
+        } else {
+            this.charWarning.classList.add('hidden');
+        }
+        
+        // Disable convert button if over limit
+        if (currentLength > this.currentCharLimit) {
+            this.convertBtn.disabled = true;
+        } else {
+            this.convertBtn.disabled = false;
+        }
+    }
+    
     clearInput() {
         this.inputText.value = '';
         this.outputText.innerHTML = '<div class=\"text-pink-400 italic\">整形された文章がここに表示されます...</div>';
         this.copyBtn.disabled = true;
         this.inputText.focus();
+        this.updateCharCount();
     }
     
     showLoading(show) {

@@ -17,15 +17,16 @@ app.use(renderer)
 // Claude API conversion endpoint
 app.post('/api/convert', async (c) => {
   try {
-    const { text, style, docType, format } = await c.req.json()
+    const { text, style, docType, format, charLimit } = await c.req.json()
     
     if (!text || !text.trim()) {
       return c.json({ success: false, error: '入力テキストが空です' }, 400)
     }
     
-    // 入力テキストの長さ制限
-    if (text.length > 2000) {
-      return c.json({ success: false, error: '入力テキストが長すぎます（2000文字以内でお願いします）' }, 400)
+    // 動的な文字数制限（デフォルト1000、最大1000）
+    const maxChars = Math.min(parseInt(charLimit) || 1000, 1000)
+    if (text.length > maxChars) {
+      return c.json({ success: false, error: `入力テキストが長すぎます（${maxChars}文字以内でお願いします）` }, 400)
     }
     
     // オプション値の検証
@@ -140,6 +141,27 @@ app.get('/', (c) => {
         <div className="bg-white rounded-lg shadow-lg overflow-hidden border border-pink-200">
           {/* Options Bar */}
           <div className="bg-pink-50 px-6 py-4 border-b border-pink-200">
+            {/* Character Limit Slider */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-semibold text-pink-800">文字数制限</label>
+                <span id="char-limit-display" className="text-sm text-pink-700 font-medium">500文字</span>
+              </div>
+              <div className="flex items-center space-x-4">
+                <span className="text-xs text-pink-600">100</span>
+                <input 
+                  type="range" 
+                  id="char-limit-slider" 
+                  min="100" 
+                  max="1000" 
+                  step="50" 
+                  value="500"
+                  className="flex-1 h-2 bg-pink-200 rounded-lg appearance-none cursor-pointer slider-pink"
+                />
+                <span className="text-xs text-pink-600">1000</span>
+              </div>
+            </div>
+            
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Style Selection */}
               <div className="space-y-2">
@@ -187,12 +209,21 @@ app.get('/', (c) => {
             {/* Input Area */}
             <div className="p-6 border-r border-pink-200">
               <div className="mb-4">
-                <label className="block text-sm font-semibold text-pink-800 mb-2">入力</label>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-sm font-semibold text-pink-800">入力</label>
+                  <div className="text-sm text-pink-600">
+                    <span id="char-count">0</span> / <span id="char-limit">500</span> 文字
+                  </div>
+                </div>
                 <textarea 
                   id="input-text"
                   className="w-full h-80 p-4 border border-pink-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                  placeholder="口頭メモや簡単なメモをここに入力してください..."
+                  placeholder="口頭メモや簡单なメモをここに入力してください..."
+                  maxlength="500"
                 ></textarea>
+                <div id="char-warning" className="hidden text-sm text-pink-700 mt-1">
+                  文字数が上限に達しました
+                </div>
               </div>
               <div className="flex justify-between items-center">
                 <button id="voice-input" className="flex items-center space-x-2 px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors">
