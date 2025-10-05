@@ -25,6 +25,16 @@ class NursingAssistant {
         this.copyBtn = document.getElementById('copy-btn');
         this.clearBtn = document.getElementById('clear-input');
         this.loading = document.getElementById('loading');
+        
+        // Character limit elements
+        this.charLimitSlider = document.getElementById('char-limit-slider');
+        this.charLimitDisplay = document.getElementById('char-limit-display');
+        this.charCount = document.getElementById('char-count');
+        this.charLimit = document.getElementById('char-limit');
+        this.charWarning = document.getElementById('char-warning');
+        
+        // Initialize character limit
+        this.currentCharLimit = 500;
     }
     
     initializeSpeechRecognition() {
@@ -111,8 +121,18 @@ class NursingAssistant {
             this.clearBtn.addEventListener('click', () => this.clearInput());
         }
         
-        // Input text change listener for auto-convert (disabled for now)
-        // this.inputText.addEventListener('input', debounce(() => this.convertText(), 1000));
+        // Character limit slider
+        if (this.charLimitSlider) {
+            this.charLimitSlider.addEventListener('input', () => this.updateCharLimit());
+        }
+        
+        // Input text change listener for character counting
+        if (this.inputText) {
+            this.inputText.addEventListener('input', () => this.updateCharCount());
+        }
+        
+        // Initialize character count display
+        this.updateCharCount();
     }
     
     attachOptionListeners() {

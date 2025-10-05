@@ -215,6 +215,16 @@ app.get('/', (c) => {
                     <span id="char-count">0</span> / <span id="char-limit">500</span> 文字
                   </div>
                 </div>
+                {/* 個人情報注意書き */}
+                <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-md">
+                  <div className="flex items-center space-x-2">
+                    <i className="fas fa-exclamation-triangle text-red-500"></i>
+                    <span className="text-sm font-semibold text-red-700">重要な注意</span>
+                  </div>
+                  <p className="text-sm text-red-600 mt-1">
+                    個人情報（氏名、住所、生年月日、電話番号など）は絶対に入力しないでください。
+                  </p>
+                </div>
                 <textarea 
                   id="input-text"
                   className="w-full h-80 p-4 border border-pink-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
@@ -226,10 +236,15 @@ app.get('/', (c) => {
                 </div>
               </div>
               <div className="flex justify-between items-center">
-                <button id="voice-input" className="flex items-center space-x-2 px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors">
-                  <i id="mic-icon" className="fas fa-microphone"></i>
-                  <span id="voice-status">音声入力開始</span>
-                </button>
+                <div className="flex space-x-2">
+                  <button id="voice-input" className="flex items-center space-x-2 px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors">
+                    <i id="mic-icon" className="fas fa-microphone"></i>
+                    <span id="voice-status">音声入力開始</span>
+                  </button>
+                  <button id="convert-btn" className="px-6 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    変換
+                  </button>
+                </div>
                 <button id="clear-input" className="px-4 py-2 bg-pink-400 text-white rounded-lg hover:bg-pink-500 transition-colors">
                   クリア
                 </button>
@@ -248,14 +263,9 @@ app.get('/', (c) => {
                 </div>
               </div>
               <div className="flex justify-between items-center">
-                <div className="flex space-x-2">
-                  <button id="convert-btn" className="px-6 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                    変換
-                  </button>
-                  <div id="loading" className="hidden flex items-center space-x-2 text-pink-600">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-pink-600"></div>
-                    <span>処理中...</span>
-                  </div>
+                <div id="loading" className="hidden flex items-center space-x-2 text-pink-600">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-pink-600"></div>
+                  <span>処理中...</span>
                 </div>
                 <button id="copy-btn" className="flex items-center space-x-2 px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
                   <i className="fas fa-copy"></i>
@@ -272,7 +282,6 @@ app.get('/', (c) => {
           <ol className="list-decimal list-inside space-y-2 text-pink-800">
             <li>左側の入力エリアに口頭メモや簡単なメモを入力してください</li>
             <li>音声入力を使用する場合は「音声入力開始」ボタンをクリックしてください</li>
-            <li>文体、ドキュメント種別、フォーマットを選択してください</li>
             <li>「変換」ボタンをクリックして整形された文章を取得してください</li>
             <li>右側の出力エリアに整形された文章が表示されます</li>
             <li>「コピー」ボタンで結果をクリップボードにコピーできます</li>
