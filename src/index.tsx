@@ -1097,10 +1097,10 @@ app.get('/', (c) => {
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-pink-800">文体</label>
                 <div className="flex space-x-2">
-                  <button id="style-plain" className="px-4 py-2 bg-pink-100 text-pink-700 rounded-md text-sm font-medium hover:bg-pink-200 transition-colors">
+                  <button id="style-plain" className="px-4 py-2 bg-pink-600 text-white rounded-md text-sm font-medium hover:bg-pink-700 transition-colors">
                     だ・である体
                   </button>
-                  <button id="style-polite" className="px-4 py-2 bg-pink-600 text-white rounded-md text-sm font-medium hover:bg-pink-700 transition-colors">
+                  <button id="style-polite" className="px-4 py-2 bg-pink-100 text-pink-700 rounded-md text-sm font-medium hover:bg-pink-200 transition-colors">
                     ですます体
                   </button>
                 </div>
@@ -1204,7 +1204,7 @@ app.get('/', (c) => {
           <h3 className="text-lg font-semibold text-pink-900 mb-3">タップカルテの使い方</h3>
           <ol className="list-decimal list-inside space-y-2 text-pink-800">
             <li>思ったことやメモを入力エリアにそのまま入力</li>
-            <li>生成ボタンをタップして、整った看護記録や報告書が自動生成されます</li>
+            <li>生成ボタンをタップして、整った看護記録や報告書が自動生成</li>
             <li>「コピー」ボタンで電子カルテにそのまま貼り付け可能</li>
           </ol>
         </div>
