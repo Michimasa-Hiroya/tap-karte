@@ -64,6 +64,10 @@ class NursingAssistant {
         // Initialize character limit (for output)
         this.currentCharLimit = 500;
         
+        // Character count elements
+        this.inputCountDisplay = document.getElementById('input-count');
+        this.outputCountDisplay = document.getElementById('output-count');
+        
         // Auth mode state
         this.isRegisterMode = false;
     }
@@ -108,7 +112,40 @@ class NursingAssistant {
         // Authentication event listeners
         this.attachAuthListeners();
         
-        // 入力文字数カウント関連のリスナーを削除
+        // Character count listeners
+        this.attachCharCountListeners();
+    }
+    
+    // 文字数カウント関連イベントリスナー
+    attachCharCountListeners() {
+        // 入力エリアの文字数カウント
+        if (this.inputText) {
+            this.inputText.addEventListener('input', () => {
+                this.updateInputCharCount();
+            });
+            
+            // 初期値設定
+            this.updateInputCharCount();
+        }
+    }
+    
+    // 入力文字数更新
+    updateInputCharCount() {
+        if (this.inputText && this.inputCountDisplay) {
+            const count = this.inputText.value.length;
+            this.inputCountDisplay.textContent = `${count}文字`;
+        }
+    }
+    
+    // 出力文字数更新
+    updateOutputCharCount() {
+        if (this.outputText && this.outputCountDisplay) {
+            const text = this.outputText.textContent || '';
+            // プレースホルダーテキストの場合は0文字とする
+            const count = text.includes('生成された文章がここに表示されます') || 
+                         text.includes('整形された文章がここに表示されます') ? 0 : text.length;
+            this.outputCountDisplay.textContent = `${count}文字`;
+        }
     }
     
     // 認証関連イベントリスナー
@@ -518,6 +555,9 @@ class NursingAssistant {
                 this.outputText.innerHTML = `<div class=\"whitespace-pre-wrap\">${this.escapeHtml(result.convertedText)}</div>`;
                 this.copyBtn.disabled = false;
                 
+                // 出力文字数を更新
+                this.updateOutputCharCount();
+                
                 // 履歴を更新
                 setTimeout(() => {
                     this.loadHistory();
@@ -531,6 +571,9 @@ class NursingAssistant {
             console.error('Conversion error:', error);
             this.outputText.innerHTML = `<div class=\"text-pink-700\">エラーが発生しました: ${error.message}</div>`;
             this.copyBtn.disabled = true;
+            
+            // エラー時も文字数を更新
+            this.updateOutputCharCount();
         } finally {
             this.showLoading(false);
             this.convertBtn.disabled = false;
@@ -830,6 +873,11 @@ class NursingAssistant {
             this.inputText.value = '';
             this.outputText.innerHTML = '<div class=\"text-pink-400 italic\">整形された文章がここに表示されます...</div>';
             this.copyBtn.disabled = true;
+            
+            // 文字数カウントを更新
+            this.updateInputCharCount();
+            this.updateOutputCharCount();
+            
             this.inputText.focus();
         }
     }

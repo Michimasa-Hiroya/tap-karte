@@ -932,8 +932,8 @@ app.get('/', (c) => {
               {/* デスクトップ表示 */}
               <div className="hidden sm:block">
                 <h1 className="text-5xl md:text-6xl font-bold text-pink-800 flex items-center mb-3">
-                  <img src="https://page.gensparksite.com/v1/base64_upload/e0e0839ca795c5577a86e6b90d5285a3" alt="AI カルテ" className="w-16 h-16 mr-4" />
-                  AI カルテ
+                  <img src="https://page.gensparksite.com/v1/base64_upload/e0e0839ca795c5577a86e6b90d5285a3" alt="タップカルテ" className="w-16 h-16 mr-4" />
+                  タップカルテ
                 </h1>
                 <p className="text-lg md:text-xl text-pink-700 font-medium ml-20">思ったことを、そのままカルテに</p>
               </div>
@@ -941,9 +941,9 @@ app.get('/', (c) => {
               {/* モバイル表示 - コンパクトに1行で */}
               <div className="sm:hidden">
                 <div className="flex items-center space-x-2">
-                  <img src="https://page.gensparksite.com/v1/base64_upload/e0e0839ca795c5577a86e6b90d5285a3" alt="AI カルテ" className="w-10 h-10" />
+                  <img src="https://page.gensparksite.com/v1/base64_upload/e0e0839ca795c5577a86e6b90d5285a3" alt="タップカルテ" className="w-10 h-10" />
                   <div>
-                    <h1 className="text-xl font-bold text-pink-800 leading-tight">AI カルテ</h1>
+                    <h1 className="text-xl font-bold text-pink-800 leading-tight">タップカルテ</h1>
                     <p className="text-xs text-pink-700 font-medium leading-tight whitespace-nowrap">思ったことを、そのままカルテに</p>
                   </div>
                 </div>
@@ -1136,6 +1136,7 @@ app.get('/', (c) => {
               <div className="mb-4">
                 <div className="flex justify-between items-center mb-2">
                   <label className="block text-sm font-semibold text-pink-800">入力</label>
+                  <span id="input-count" className="text-sm text-pink-600">0文字</span>
                 </div>
                 {/* 個人情報注意書き */}
                 <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-md">
@@ -1173,7 +1174,10 @@ app.get('/', (c) => {
             {/* Output Area */}
             <div className="p-6">
               <div className="mb-4">
-                <label className="block text-sm font-semibold text-pink-800 mb-2">出力</label>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-sm font-semibold text-pink-800">出力</label>
+                  <span id="output-count" className="text-sm text-pink-600">0文字</span>
+                </div>
                 <div 
                   id="output-text"
                   className="w-full h-80 p-4 bg-pink-25 border border-pink-300 rounded-lg overflow-y-auto whitespace-pre-wrap"
@@ -1197,7 +1201,7 @@ app.get('/', (c) => {
 
         {/* Usage Instructions */}
         <div className="mt-8 bg-pink-50 rounded-lg p-6 border border-pink-200">
-          <h3 className="text-lg font-semibold text-pink-900 mb-3">AI カルテの使い方</h3>
+          <h3 className="text-lg font-semibold text-pink-900 mb-3">タップカルテの使い方</h3>
           <ol className="list-decimal list-inside space-y-2 text-pink-800">
             <li>思ったことやメモを入力エリアにそのまま入力</li>
             <li>「生成」ボタンをタップして、プロの看護記録に変換</li>
