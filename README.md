@@ -1,10 +1,11 @@
-# 看護記録アシスタント
+# AI カルテ - 思ったことを、そのままカルテに
 
 ## プロジェクト概要
-- **名前**: 看護記録アシスタント
-- **目的**: 訪問看護師の記録業務効率化を支援するWebアプリケーション
+- **名前**: AI カルテ
+- **キャッチフレーズ**: 思ったことを、そのままカルテに
+- **目的**: 看護・介護記録業務効率化を支援するWebアプリケーション
 - **機能**: 口頭メモや簡単なメモを、整った看護記録・報告書に変換
-- **デザイン**: 淡いピンクを基調とした優しく親しみやすいUI
+- **デザイン**: 淡いピンクを基調とした優しく親しみやすいUI、かわいい看護師鳥キャラクター
 
 ## 現在実装済み機能
 
@@ -27,10 +28,12 @@
    - 視覚的フィードバック（無効化時は半透明表示）
 
 4. **Claude API連携**
-   - Anthropic Claude Haiku API使用
+   - Anthropic Claude 3.5 Sonnet API使用
    - 20年経験の訪問看護師としてのプロンプト
+   - **医療専門用語辞書統合**: 200語の看護・リハビリ専門用語対応
    - **創作防止強化**: 入力情報のみ基づく出力
-   - 誤字脱字自動修正
+   - **ストリームライン報告書**: 簡潔で要点を絞った報告書形式
+   - 誤字脱字自動修正、「患者」を「利用者」に統一
    - 選択オプションに応じた文体・形式変換
 
 5. **SOAP形式出力**
@@ -97,15 +100,17 @@
 - 入力が少ない場合は、出力も短くなります
 
 ## URL
-- **開発サーバー**: https://3000-ixy1wtk4hmb4mowt6eshr-6532622b.e2b.dev
+- **プロダクション**: https://1739bac7.tap-carte.pages.dev （最新デプロイ）
+- **メインサイト**: https://tap-carte.pages.dev
+- **開発サーバー**: http://localhost:3000 （ローカル開発用）
 - **GitHub**: （設定予定）
-- **Cloudflare Pages**: （デプロイ予定）
 
 ## デプロイメント
-- **プラットフォーム**: Cloudflare Pages 対応
-- **ステータス**: ✅ 開発環境で動作中
-- **技術スタック**: Hono + TypeScript + Tailwind CSS + Claude Haiku API
-- **最終更新**: 2025-10-05
+- **プラットフォーム**: Cloudflare Pages
+- **ステータス**: ✅ プロダクション稼働中（ストリームライン報告書対応）
+- **プロジェクト名**: tap-carte
+- **技術スタック**: Hono + TypeScript + Tailwind CSS + Claude 3.5 Sonnet API + Cloudflare D1
+- **最終デプロイ**: 2025-10-06（ストリームライン報告書機能追加）
 
 ## 開発・運用情報
 
@@ -135,18 +140,37 @@ curl -X POST http://localhost:3000/api/convert \
 ```
 
 ### 本番デプロイ（Cloudflare Pages）
+
+#### 手動デプロイ手順
+1. **プロジェクトバックアップをダウンロード**:
+   - https://page.gensparksite.com/project_backups/nursing-assistant-ready-to-deploy.tar.gz
+
+2. **Cloudflare Pages Dashboard設定**:
+   - Cloudflare Dashboard → Pages → Create application
+   - Upload assets を選択して dist/ フォルダをアップロード
+   - または GitHub連携でリポジトリからデプロイ
+
+3. **環境変数設定**:
+   - Settings → Environment variables
+   - `CLAUDE_API_KEY` を設定
+
+#### CLI デプロイ（要・適切なAPIトークン）
 ```bash
-# 1. Cloudflare API設定
-setup_cloudflare_api_key
+# 注意: 提供されたAPIトークンは権限不足のため、
+# 以下のコマンドは現在実行できません
 
-# 2. プロジェクト作成 
-npx wrangler pages project create nursing-assistant --production-branch main
+# 1. APIトークンの権限要件
+# - Cloudflare Pages:Edit
+# - Zone:Zone Settings:Read  
+# - Zone:Zone:Read
+# - User:User Details:Read
 
-# 3. ビルド＆デプロイ
+# 2. 正しい権限のトークンで実行
+export CLOUDFLARE_API_TOKEN=your_full_permission_token
 npm run build
 npx wrangler pages deploy dist --project-name nursing-assistant
 
-# 4. 環境変数設定
+# 3. 環境変数設定
 npx wrangler pages secret put CLAUDE_API_KEY --project-name nursing-assistant
 ```
 
@@ -168,11 +192,18 @@ npx wrangler pages secret put CLAUDE_API_KEY --project-name nursing-assistant
 - **デプロイ**: Cloudflare Workers/Pages
 - **ブラウザ要件**: モダンブラウザ（Chrome, Firefox, Safari, Edge）
 
-## 今後の拡張予定
+## 実装済み高度機能
+- [x] **ユーザー認証システム**: メール+パスワード、Google OAuth対応
+- [x] **個別履歴管理**: ユーザー別記録保存・閲覧機能（Cloudflare D1）
+- [x] **医療用語辞書**: 200語の専門用語統合
+- [x] **ブランディング**: AI カルテ「思ったことを、そのままカルテに」
+- [x] **ストリームライン報告書**: 簡潔な要点整理型報告書
+- [x] **JWT認証**: セキュアなセッション管理
+- [x] **レスポンシブ対応**: モバイル・デスクトップ最適化
+
+## 今後の拡張予定  
 - [ ] GitHub リポジトリ設定・コード管理
-- [ ] Cloudflare Pages 本番デプロイ
-- [ ] ユーザー認証・ログイン機能
-- [ ] 記録履歴の保存・管理（Cloudflare D1）
 - [ ] テンプレート機能
 - [ ] 印刷最適化
 - [ ] パフォーマンス改善
+- [ ] 多言語対応

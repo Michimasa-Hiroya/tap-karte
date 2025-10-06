@@ -2,10 +2,27 @@ import { Hono } from 'hono'
 import { renderer } from './renderer'
 import { cors } from 'hono/cors'
 import Anthropic from '@anthropic-ai/sdk'
+import { medicalTerms } from './medical-dictionary'
+import { 
+  hashPassword, 
+  verifyPassword, 
+  generateJWT, 
+  verifyJWT, 
+  isValidEmail, 
+  isValidPassword,
+  getSessionFromRequest,
+  verifyGoogleToken,
+  type User,
+  type CreateUserData,
+  type SessionInfo
+} from './auth'
 
 type Bindings = {
-  CLAUDE_API_KEY: string;
+  ANTHROPIC_API_KEY: string;
+  JWT_SECRET: string; // JWT署名用シークレット
+  GOOGLE_CLIENT_ID: string; // Google OAuth用
   DB: D1Database;
+  USERS_KV: KVNamespace; // ユーザーデータ永続化用
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -53,8 +70,11 @@ async function logNursingRecord(db: D1Database, data: {
   responseTime: number
   ipAddress?: string
   userAgent?: string
+  userId?: number | null // 追加
 }) {
   try {
+    // user_id列があるかチェックして、適切なクエリを選択
+    // 今回は既存テーブル構造を維持するため、user_idは別途管理
     await db.prepare(`
       INSERT INTO nursing_records 
       (session_id, input_text, output_text, options_style, options_doc_type, options_format, char_limit, response_time, ip_address, user_agent)
@@ -127,8 +147,8 @@ async function logSecurity(db: D1Database, data: {
 // Security check endpoint
 app.get('/api/security-status', async (c) => {
   const securityChecks = {
-    apiKeyConfigured: !!c.env?.CLAUDE_API_KEY,
-    apiKeyLength: c.env?.CLAUDE_API_KEY ? c.env.CLAUDE_API_KEY.length : 0,
+    apiKeyConfigured: !!c.env?.ANTHROPIC_API_KEY,
+    apiKeyLength: c.env?.ANTHROPIC_API_KEY ? c.env.ANTHROPIC_API_KEY.length : 0,
     environment: c.env?.NODE_ENV || 'development',
     timestamp: new Date().toISOString(),
     securityHeaders: {
@@ -156,39 +176,78 @@ app.get('/api/security-status', async (c) => {
       outputSanitization: true
     },
     recommendations: keyStatus === 'not_configured' 
-      ? ['Configure CLAUDE_API_KEY environment variable']
+      ? ['Configure ANTHROPIC_API_KEY environment variable']
       : keyStatus === 'invalid_format'
-      ? ['Verify CLAUDE_API_KEY format']
+      ? ['Verify ANTHROPIC_API_KEY format']
       : [],
     timestamp: securityChecks.timestamp
   })
 })
 
-// History endpoints
-app.get('/api/history/:sessionId', async (c) => {
+// History endpoints - ユーザー認証対応版
+app.get('/api/history/:sessionId?', async (c) => {
   try {
-    const sessionId = c.req.param('sessionId')
     const db = c.env?.DB
     
     if (!db) {
       return c.json({ success: false, error: 'Database not available' }, 500)
     }
     
-    const { results } = await db.prepare(`
-      SELECT id, input_text, output_text, options_style, options_doc_type, options_format, 
-             char_limit, response_time, created_at
-      FROM nursing_records 
-      WHERE session_id = ? 
-      ORDER BY created_at DESC 
-      LIMIT 50
-    `).bind(sessionId).all()
+    // 認証チェック
+    const session = await getSessionFromRequest(c, c.env?.JWT_SECRET)
     
-    return c.json({
-      success: true,
-      records: results,
-      sessionId: sessionId,
-      count: results.length
-    })
+    if (session && session.isAuthenticated) {
+      // ログイン済みユーザー: ユーザー別履歴を取得
+      // 現在は仮実装：全ての履歴を表示（後でユーザー別フィルタリングを追加予定）
+      const { results } = await db.prepare(`
+        SELECT id, input_text, output_text, options_style, options_doc_type, options_format, 
+               char_limit, response_time, created_at
+        FROM nursing_records 
+        ORDER BY created_at DESC 
+        LIMIT 50
+      `).all()
+      
+      return c.json({
+        success: true,
+        records: results,
+        userId: session.userId,
+        count: results.length,
+        authenticated: true,
+        message: '現在は全ユーザーの履歴を表示しています（個別管理は今後実装予定）'
+      })
+      
+    } else {
+      // 未ログインユーザー: セッション別履歴（従来通り）
+      const sessionId = c.req.param('sessionId')
+      
+      if (!sessionId) {
+        return c.json({
+          success: true,
+          records: [],
+          sessionId: null,
+          count: 0,
+          authenticated: false,
+          message: 'ログインすると履歴が永続的に保存されます'
+        })
+      }
+      
+      const { results } = await db.prepare(`
+        SELECT id, input_text, output_text, options_style, options_doc_type, options_format, 
+               char_limit, response_time, created_at
+        FROM nursing_records 
+        WHERE session_id = ? AND user_id IS NULL
+        ORDER BY created_at DESC 
+        LIMIT 20
+      `).bind(sessionId).all()
+      
+      return c.json({
+        success: true,
+        records: results,
+        sessionId: sessionId,
+        count: results.length,
+        authenticated: false
+      })
+    }
     
   } catch (error) {
     console.error('History fetch error:', error)
@@ -260,7 +319,7 @@ app.get('/api/health', async (c) => {
       services: {
         api: 'operational',
         database: c.env?.DB ? 'operational' : 'not_configured',
-        claudeApi: c.env?.CLAUDE_API_KEY ? 'configured' : 'not_configured'
+        claudeApi: c.env?.ANTHROPIC_API_KEY ? 'configured' : 'not_configured'
       }
     })
   } catch (error) {
@@ -277,13 +336,341 @@ app.get('/api/health', async (c) => {
   }
 })
 
+// ユーザーデータベース関数（KV Storage永続化対応）
+async function findUserByEmail(kv: KVNamespace, email: string): Promise<User | null> {
+  try {
+    const userData = await kv.get(`user:email:${email}`)
+    return userData ? JSON.parse(userData) : null
+  } catch (error) {
+    console.error('Error finding user by email:', error)
+    return null
+  }
+}
+
+async function findUserById(kv: KVNamespace, id: number): Promise<User | null> {
+  try {
+    const userData = await kv.get(`user:id:${id}`)
+    return userData ? JSON.parse(userData) : null
+  } catch (error) {
+    console.error('Error finding user by id:', error)
+    return null
+  }
+}
+
+async function createUser(kv: KVNamespace, userData: CreateUserData, hashedPassword?: string): Promise<User> {
+  try {
+    // 次のユーザーIDを取得
+    const nextIdData = await kv.get('next_user_id')
+    const nextId = nextIdData ? parseInt(nextIdData) : 1
+    
+    const user: User = {
+      id: nextId,
+      email: userData.email,
+      display_name: userData.display_name,
+      profile_image: userData.profile_image,
+      auth_provider: userData.auth_provider,
+      google_id: userData.google_id,
+      email_verified: userData.email_verified || false,
+      created_at: new Date().toISOString(),
+      last_login_at: new Date().toISOString()
+    }
+    
+    // ユーザーデータを保存
+    await Promise.all([
+      kv.put(`user:id:${nextId}`, JSON.stringify(user)),
+      kv.put(`user:email:${userData.email}`, JSON.stringify(user)),
+      kv.put('next_user_id', (nextId + 1).toString()),
+      // パスワードハッシュを別途保存
+      hashedPassword ? kv.put(`password:${userData.email}`, hashedPassword) : Promise.resolve()
+    ])
+    
+    return user
+  } catch (error) {
+    console.error('Error creating user:', error)
+    throw new Error('ユーザー作成に失敗しました')
+  }
+}
+
+async function updateUserLastLogin(kv: KVNamespace, user: User): Promise<void> {
+  try {
+    user.last_login_at = new Date().toISOString()
+    await Promise.all([
+      kv.put(`user:id:${user.id}`, JSON.stringify(user)),
+      kv.put(`user:email:${user.email}`, JSON.stringify(user))
+    ])
+  } catch (error) {
+    console.error('Error updating user last login:', error)
+  }
+}
+
+async function getStoredPassword(kv: KVNamespace, email: string): Promise<string | null> {
+  try {
+    return await kv.get(`password:${email}`)
+  } catch (error) {
+    console.error('Error getting stored password:', error)
+    return null
+  }
+}
+
+// ユーザー登録（メール+パスワード）
+app.post('/api/auth/register', async (c) => {
+  try {
+    const { email, password, display_name } = await c.req.json()
+    const kv = c.env?.USERS_KV
+    
+    if (!kv) {
+      console.log('[AUTH] KV Storage not available, authentication disabled in production')
+      return c.json({ success: false, error: '認証機能は現在メンテナンス中です。しばらくお待ちください。' }, 503)
+    }
+    
+    // 入力検証
+    if (!email || !password || !display_name) {
+      return c.json({ success: false, error: 'メールアドレス、パスワード、表示名は必須です' }, 400)
+    }
+    
+    if (!isValidEmail(email)) {
+      return c.json({ success: false, error: '有効なメールアドレスを入力してください' }, 400)
+    }
+    
+    const passwordValidation = isValidPassword(password)
+    if (!passwordValidation.valid) {
+      return c.json({ success: false, error: passwordValidation.message }, 400)
+    }
+    
+    // 既存ユーザーチェック
+    const existingUser = await findUserByEmail(kv, email)
+    if (existingUser) {
+      return c.json({ success: false, error: 'このメールアドレスは既に使用されています' }, 400)
+    }
+    
+    // パスワードハッシュ化
+    const hashedPassword = await hashPassword(password)
+    
+    // ユーザー作成
+    const newUser = await createUser(kv, {
+      email,
+      display_name,
+      auth_provider: 'email',
+      email_verified: false
+    }, hashedPassword)
+    
+    // JWTトークン生成
+    const token = await generateJWT(newUser, c.env?.JWT_SECRET)
+    
+    // レスポンス
+    return c.json({
+      success: true,
+      user: {
+        id: newUser.id,
+        email: newUser.email,
+        display_name: newUser.display_name,
+        profile_image: newUser.profile_image
+      },
+      token
+    })
+    
+  } catch (error) {
+    console.error('Registration error:', error)
+    return c.json({ success: false, error: '登録中にエラーが発生しました' }, 500)
+  }
+})
+
+// ログイン（メール+パスワード）
+app.post('/api/auth/login', async (c) => {
+  try {
+    const { email, password } = await c.req.json()
+    const kv = c.env?.USERS_KV
+    
+    if (!kv) {
+      console.log('[AUTH] KV Storage not available, authentication disabled in production')
+      return c.json({ success: false, error: '認証機能は現在メンテナンス中です。しばらくお待ちください。' }, 503)
+    }
+    
+    // 入力検証
+    if (!email || !password) {
+      return c.json({ success: false, error: 'メールアドレスとパスワードは必須です' }, 400)
+    }
+    
+    if (!isValidEmail(email)) {
+      return c.json({ success: false, error: '有効なメールアドレスを入力してください' }, 400)
+    }
+    
+    // ユーザー検索
+    const user = await findUserByEmail(kv, email)
+    if (!user || user.auth_provider !== 'email') {
+      return c.json({ success: false, error: 'メールアドレスまたはパスワードが間違っています' }, 401)
+    }
+    
+    // 保存されたパスワードハッシュを取得して検証
+    const storedPasswordHash = await getStoredPassword(kv, email)
+    if (!storedPasswordHash) {
+      return c.json({ success: false, error: 'メールアドレスまたはパスワードが間違っています' }, 401)
+    }
+    
+    const isValidPassword = await verifyPassword(password, storedPasswordHash)
+    if (!isValidPassword) {
+      return c.json({ success: false, error: 'メールアドレスまたはパスワードが間違っています' }, 401)
+    }
+    
+    // JWTトークン生成
+    const token = await generateJWT(user, c.env?.JWT_SECRET)
+    
+    // 最終ログイン時刻更新
+    await updateUserLastLogin(kv, user)
+    
+    // レスポンス
+    return c.json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        display_name: user.display_name,
+        profile_image: user.profile_image
+      },
+      token
+    })
+    
+  } catch (error) {
+    console.error('Login error:', error)
+    return c.json({ success: false, error: 'ログイン中にエラーが発生しました' }, 500)
+  }
+})
+
+// Google OAuth ログイン
+app.post('/api/auth/google', async (c) => {
+  try {
+    const { token: googleToken } = await c.req.json()
+    const kv = c.env?.USERS_KV
+    
+    if (!kv) {
+      console.log('[AUTH] KV Storage not available, authentication disabled in production')
+      return c.json({ success: false, error: '認証機能は現在メンテナンス中です。しばらくお待ちください。' }, 503)
+    }
+    
+    if (!googleToken) {
+      return c.json({ success: false, error: 'Googleトークンが必要です' }, 400)
+    }
+    
+    // Google トークン検証
+    const googleUser = await verifyGoogleToken(googleToken)
+    if (!googleUser) {
+      return c.json({ success: false, error: '無効なGoogleトークンです' }, 401)
+    }
+    
+    // 既存ユーザー検索
+    let user = await findUserByEmail(kv, googleUser.email)
+    
+    if (!user) {
+      // 新規ユーザー作成
+      user = await createUser(kv, {
+        email: googleUser.email,
+        display_name: googleUser.name,
+        profile_image: googleUser.picture,
+        auth_provider: 'google',
+        google_id: googleUser.sub,
+        email_verified: googleUser.email_verified
+      })
+    } else if (user.auth_provider !== 'google') {
+      // 既存のメールユーザーをGoogleアカウントにリンク
+      user.auth_provider = 'google'
+      user.google_id = googleUser.sub
+      user.email_verified = googleUser.email_verified
+      
+      // 更新されたユーザー情報を保存
+      await Promise.all([
+        kv.put(`user:id:${user.id}`, JSON.stringify(user)),
+        kv.put(`user:email:${user.email}`, JSON.stringify(user))
+      ])
+    }
+    
+    // JWTトークン生成
+    const token = await generateJWT(user, c.env?.JWT_SECRET)
+    
+    // 最終ログイン時刻更新
+    await updateUserLastLogin(kv, user)
+    
+    // レスポンス
+    return c.json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        display_name: user.display_name,
+        profile_image: user.profile_image
+      },
+      token
+    })
+    
+  } catch (error) {
+    console.error('Google login error:', error)
+    return c.json({ success: false, error: 'Googleログイン中にエラーが発生しました' }, 500)
+  }
+})
+
+// 現在のユーザー情報取得
+app.get('/api/auth/me', async (c) => {
+  try {
+    const session = await getSessionFromRequest(c, c.env?.JWT_SECRET)
+    const kv = c.env?.USERS_KV
+    
+    if (!kv) {
+      console.log('[AUTH] KV Storage not available, authentication disabled in production')
+      return c.json({ success: false, error: '認証機能は現在メンテナンス中です。しばらくお待ちください。' }, 503)
+    }
+    
+    if (!session || !session.isAuthenticated) {
+      return c.json({ success: false, error: '認証が必要です' }, 401)
+    }
+    
+    const user = await findUserById(kv, session.userId)
+    if (!user) {
+      return c.json({ success: false, error: 'ユーザーが見つかりません' }, 404)
+    }
+    
+    return c.json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        display_name: user.display_name,
+        profile_image: user.profile_image,
+        email_verified: user.email_verified,
+        created_at: user.created_at
+      }
+    })
+    
+  } catch (error) {
+    console.error('User info error:', error)
+    return c.json({ success: false, error: 'ユーザー情報取得中にエラーが発生しました' }, 500)
+  }
+})
+
+// ログアウト
+app.post('/api/auth/logout', async (c) => {
+  try {
+    // セッション情報をクリア（実装では実際のセッション削除を行う）
+    return c.json({
+      success: true,
+      message: 'ログアウトしました'
+    })
+    
+  } catch (error) {
+    console.error('Logout error:', error)
+    return c.json({ success: false, error: 'ログアウト中にエラーが発生しました' }, 500)
+  }
+})
+
 // Claude API conversion endpoint
 app.post('/api/convert', async (c) => {
   const startTime = Date.now()
   let success = false
   let errorType = ''
+  let maxOutputChars = 1000 // デフォルト値をここで定義
   
   try {
+    // ユーザー認証チェック（オプション）
+    const session = await getSessionFromRequest(c, c.env?.JWT_SECRET)
+    
     const { text, style, docType, format, charLimit } = await c.req.json()
     
     // 入力検証とサニタイゼーション
@@ -329,7 +716,7 @@ app.post('/api/convert', async (c) => {
     }
     
     // 出力文字数制限（デフォルト1000、最大1000）
-    const maxOutputChars = Math.min(parseInt(charLimit) || 1000, 1000)
+    maxOutputChars = Math.min(parseInt(charLimit) || 1000, 1000)
     
     // オプション値の検証
     const validStyles = ['ですます体', 'だ・である体']
@@ -341,7 +728,7 @@ app.post('/api/convert', async (c) => {
       return c.json({ success: false, error: '無効なオプションが選択されています' }, 400)
     }
     
-    const apiKey = c.env?.CLAUDE_API_KEY
+    const apiKey = c.env?.ANTHROPIC_API_KEY
     if (!apiKey) {
       errorType = 'config_error'
       return c.json({ success: false, error: 'Claude APIキーが設定されていません' }, 500)
@@ -351,31 +738,40 @@ app.post('/api/convert', async (c) => {
       apiKey: apiKey,
     })
     
-    const prompt = `あなたは、20年の臨床経験を持つ、極めて優秀な訪問看護師であり、かつ専門知識を有する訪問セラピスト（理学療法士・作業療法士・言語聴覚士）です。特に、在宅における複合的な健康課題を持つ利用者への全人的なアプローチを得意とし、多職種連携の要としてチーム医療を推進する立場にあります。
+    // 医療用語辞書をプロンプト用文字列に変換
+    const medicalTermsContext = Object.entries(medicalTerms)
+      .map(([term, meaning]) => `・${term}: ${meaning}`)
+      .join('\n')
+    
+    // ドキュメントタイプに応じた指示
+    const docTypeInstruction = docType === '報告書' 
+      ? `
+# 報告書作成要件
+報告書は、医師やケアマネジャーが状況を即座に把握できることを第一に、要点を簡潔にまとめてください。
+見出しは使用せず、時系列や重要度に応じて論理的に構成された自然な文章で記述します。観察された問題点については、具体的で実行可能な解決策と今後の方針を明確に提案してください。
 
-【重要】あなたは入力された情報のみを基に記録を作成してください。入力にない情報や詳細は一切追加・創作してはいけません。入力が少ない場合は、出力も短くて構いません。情報を補完したり、想像で詳細を付け加えることは絶対に行わないでください。
+`
+      : ''
 
-あなたの重要な任務は、入力された日常会話的な文章やメモを、他職種が利用者の状態を正確に把握し、質の高いケアを継続するための重要な公式文書（訪問看護記録書や報告書）として通用するレベルの文章に整形することです。単なる書き換えではなく、あなたの専門的視点から情報を整理し、誤字脱字や不自然な日本語を修正し、利用者の状態、実施したケア、その反応を論理的に記述してください。
+    const prompt = `あなたは看護記録の文章整形専門AIです。入力されたテキストを適切な看護記録に整形してください。
 
-以下の要件に従って、与えられた【入力テキスト】を、訪問看護の正式な記録として通用するレベルの文章に整形してください。
+# 医療・リハビリ専門用語辞書
+以下の専門用語を理解して記録を作成してください：
+${medicalTermsContext}
 
-# 要件
-・誤字脱字や不自然な日本語は、自然で正確な医療・看護の専門用語を用いて修正してください。
-・文体は「${style}」で統一してください。
-・ドキュメントの種別は「${docType}」として、それにふさわしい言葉遣いや詳細度で記述してください。
-・フォーマットは「${format}」で出力してください。
-${format === 'SOAP形式' ? '  - 「SOAP形式」の場合、S・O・A・Pの各項目に情報を適切に分類し、必ず項目ごとに改行して見出し（S: , O: , A: , P: ）を付けてください。情報が不足している項目は「特記事項なし」と記載してください。' : '  - 「文章形式」の場合、箇条書きや章立て（「身体状況」「利用者状況」など）は使用せず、自然な文章として連続的に記述してください。'}
+# 重要な制約
+・入力にない情報は一切追加しない
+・バイタルサインや具体的な数値は創作しない
+・「患者」は「利用者」と表現してください
+・文体は「${style}」で統一
+・フォーマットは「${format}」で出力
+・出力は${maxOutputChars}文字以内で簡潔に
+${docTypeInstruction}
 
-# 医療記録作成の重要な注意点
-・入力された情報以外は一切追加・創作しない（バイタルサイン、症状、処置等）
-・出力は${maxOutputChars}文字以内で簡潔にまとめてください
-・入力が短い場合は、無理に文章を長くせず、入力内容に見合った適切な長さで記述してください
-・バイタルサインは正確な医療用語と単位で記載（例：血圧150/88mmHg、脈拍78/分、体温36.8℃、SpO2 96%）
-・緊急性の高い状況では簡潔で要点を絞った表現を使用
-・認知症ケアでは「音楽的関わり」「非薬物的アプローチ」など適切な専門用語を使用
-・数値データは元の表記を尊重し、正確に記載
-・時系列を明確にし、因果関係を論理的に記述
-・文章形式では自然な段落構成で、見出しや箇条書きは使用しない
+${format === 'SOAP形式' ? 'SOAP形式では S: O: A: P: の見出しを付けて分類してください。' : ''}
+
+# 文体例
+${style === 'だ・である体' ? '「利用者に発熱がみられる。」「状態は安定している。」' : '「利用者に発熱がみられます。」「状態は安定しています。」'}
 
 # 入力テキスト
 ${sanitizedText}
@@ -425,7 +821,8 @@ ${sanitizedText}
           charLimit: maxOutputChars,
           responseTime: responseTime,
           ipAddress: c.req.header('CF-Connecting-IP'),
-          userAgent: c.req.header('User-Agent')
+          userAgent: c.req.header('User-Agent'),
+          userId: session?.isAuthenticated ? session.userId : null // 追加
         }),
         logPerformance(c.env.DB, {
           endpoint: '/api/convert',
@@ -528,24 +925,151 @@ app.get('/', (c) => {
     <div className="min-h-screen bg-pink-50">
       {/* Header */}
       <header className="bg-pink-100 shadow-sm border-b border-pink-200">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <h1 className="text-3xl font-bold text-pink-800 flex items-center">
-            <i className="fas fa-stethoscope text-pink-600 mr-3"></i>
-            看護記録アシスタント
-          </h1>
-          <p className="text-pink-700 mt-2">口頭メモや簡単なメモを、整った看護記録・報告書に変換</p>
+        <div className="max-w-7xl mx-auto px-4 py-4 sm:py-8">
+          <div className="flex justify-between items-start">
+            {/* メインタイトル領域 - 大きく表示 */}
+            <div className="flex-1">
+              {/* デスクトップ表示 */}
+              <div className="hidden sm:block">
+                <h1 className="text-5xl md:text-6xl font-bold text-pink-800 flex items-center mb-3">
+                  <img src="https://page.gensparksite.com/v1/base64_upload/e0e0839ca795c5577a86e6b90d5285a3" alt="AI カルテ" className="w-16 h-16 mr-4" />
+                  AI カルテ
+                </h1>
+                <p className="text-lg md:text-xl text-pink-700 font-medium ml-20">思ったことを、そのままカルテに</p>
+              </div>
+              
+              {/* モバイル表示 - コンパクトに1行で */}
+              <div className="sm:hidden">
+                <div className="flex items-center space-x-2">
+                  <img src="https://page.gensparksite.com/v1/base64_upload/e0e0839ca795c5577a86e6b90d5285a3" alt="AI カルテ" className="w-10 h-10" />
+                  <div>
+                    <h1 className="text-xl font-bold text-pink-800 leading-tight">AI カルテ</h1>
+                    <p className="text-xs text-pink-700 font-medium leading-tight whitespace-nowrap">思ったことを、そのままカルテに</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* ユーザーメニュー - 右上に小さく配置 */}
+            <div className="flex items-start justify-end min-w-0 flex-shrink-0">
+              {/* ログイン状態表示 */}
+              <div id="user-status" className="hidden">
+                <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-1">
+                    <img id="user-avatar" className="w-6 h-6 rounded-full" alt="Profile" />
+                    <span id="user-name" className="text-pink-800 text-sm font-medium"></span>
+                  </div>
+                  <button id="logout-btn" className="px-2 py-1 text-pink-600 hover:text-pink-800 hover:bg-pink-50 rounded-md text-xs transition-colors">
+                    <i className="fas fa-sign-out-alt mr-1"></i>ログアウト
+                  </button>
+                </div>
+              </div>
+              
+              {/* ログインボタン */}
+              <div id="auth-buttons" className="flex space-x-1">
+                <button id="login-btn" className="px-2 py-1 text-pink-700 border border-pink-300 rounded-md text-xs font-medium cursor-not-allowed opacity-60" disabled>
+                  ログイン
+                </button>
+                <button id="register-btn" className="px-2 py-1 bg-pink-600 text-white rounded-md text-xs font-medium cursor-not-allowed opacity-60" disabled>
+                  新規登録
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </header>
+      
+      {/* ログイン・登録モーダル */}
+      <div id="auth-modal" className="hidden fixed inset-0 bg-black bg-opacity-50 z-50">
+        <div className="flex items-center justify-center min-h-screen p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 id="modal-title" className="text-xl font-bold text-pink-800">ログイン</h2>
+              <button id="close-modal" className="text-gray-500 hover:text-gray-700">
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            {/* ログイン・登録フォーム */}
+            <div id="auth-form">
+              <form id="login-form">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">メールアドレス</label>
+                    <input 
+                      type="email" 
+                      id="auth-email" 
+                      required 
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">パスワード</label>
+                    <input 
+                      type="password" 
+                      id="auth-password" 
+                      required 
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+                    />
+                  </div>
+                  
+                  <div id="register-fields" className="hidden space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">表示名</label>
+                      <input 
+                        type="text" 
+                        id="auth-display-name" 
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div id="auth-error" className="hidden text-red-600 text-sm"></div>
+                  
+                  <button 
+                    type="submit" 
+                    id="auth-submit" 
+                    className="w-full px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 transition-colors"
+                  >
+                    ログイン
+                  </button>
+                </div>
+              </form>
+              
+              <div className="mt-4">
+                <div className="text-center text-gray-500 text-sm mb-3">または</div>
+                <button 
+                  id="google-login-btn" 
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors flex items-center justify-center space-x-2"
+                >
+                  <i className="fab fa-google text-red-500"></i>
+                  <span>Googleでログイン</span>
+                </button>
+              </div>
+              
+              <div className="mt-4 text-center">
+                <button id="toggle-auth-mode" className="text-pink-600 hover:text-pink-800 text-sm">
+                  アカウントをお持ちでない場合は新規登録
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="bg-white rounded-lg shadow-lg overflow-hidden border border-pink-200">
           {/* Options Bar */}
           <div className="bg-pink-50 px-6 py-4 border-b border-pink-200">
+            <div className="mb-4">
+              <p className="text-sm text-pink-800 font-semibold">作成したい書式に合わせて選択してください</p>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Document Type Selection */}
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-pink-800">ドキュメント種別</label>
+                <label className="text-sm font-semibold text-pink-800">ドキュメント</label>
                 <div className="flex space-x-2">
                   <button id="doc-record" className="px-4 py-2 bg-pink-600 text-white rounded-md text-sm font-medium hover:bg-pink-700 transition-colors">
                     記録
@@ -587,7 +1111,7 @@ app.get('/', (c) => {
             <div className="mt-4">
               <div className="flex items-center justify-between mb-2">
                 <label className="text-sm font-semibold text-pink-800">出力文字数制限</label>
-                <span id="char-limit-display" className="text-sm text-pink-700 font-medium">1000文字</span>
+                <span id="char-limit-display" className="text-sm text-pink-700 font-medium">500文字</span>
               </div>
               <div className="flex items-center space-x-4">
                 <span className="text-xs text-pink-600">100</span>
@@ -597,7 +1121,7 @@ app.get('/', (c) => {
                   min="100" 
                   max="1000" 
                   step="50" 
-                  value="1000"
+                  value="500"
                   className="flex-1 h-2 bg-pink-200 rounded-lg appearance-none cursor-pointer slider-pink"
                 />
                 <span className="text-xs text-pink-600">1000</span>
@@ -623,16 +1147,21 @@ app.get('/', (c) => {
                     個人情報（氏名、住所、生年月日、電話番号など）は絶対に入力しないでください。
                   </p>
                 </div>
+                
+
                 <textarea 
                   id="input-text"
                   className="w-full h-80 p-4 border border-pink-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-                  placeholder="口頭メモや簡単なメモをここに入力してください..."
+                  placeholder="・思いついたことを、そのまま入力してタップするだけ
+・箇条書きでもOK
+・テキスト入力や音声入力でもOK
+・誤字脱字があっても大丈夫"
                 ></textarea>
               </div>
               <div className="flex justify-between items-center">
                 <div className="flex space-x-2">
                   <button id="convert-btn" className="px-6 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                    変換
+                    生成
                   </button>
                   <button id="clear-input" className="px-4 py-2 bg-pink-400 text-white rounded-lg hover:bg-pink-500 transition-colors">
                     クリア
@@ -649,7 +1178,7 @@ app.get('/', (c) => {
                   id="output-text"
                   className="w-full h-80 p-4 bg-pink-25 border border-pink-300 rounded-lg overflow-y-auto whitespace-pre-wrap"
                 >
-                  <div className="text-pink-400 italic">整形された文章がここに表示されます...</div>
+                  <div className="text-pink-400 italic">生成された文章がここに表示されます...</div>
                 </div>
               </div>
               <div className="flex justify-between items-center">
@@ -668,14 +1197,36 @@ app.get('/', (c) => {
 
         {/* Usage Instructions */}
         <div className="mt-8 bg-pink-50 rounded-lg p-6 border border-pink-200">
-          <h3 className="text-lg font-semibold text-pink-900 mb-3">使い方</h3>
+          <h3 className="text-lg font-semibold text-pink-900 mb-3">AI カルテの使い方</h3>
           <ol className="list-decimal list-inside space-y-2 text-pink-800">
-            <li>入力エリアに口頭メモや簡単なメモを入力してください</li>
-            <li>「変換」ボタンをクリックして整形された文章を取得してください</li>
-            <li>出力エリアに整形された文章が表示されます</li>
-            <li>「コピー」ボタンで結果をクリップボードにコピーできます</li>
+            <li>思ったことやメモを入力エリアにそのまま入力</li>
+            <li>「生成」ボタンをタップして、プロの看護記録に変換</li>
+            <li>整った看護記録・報告書が自動生成されます</li>
+            <li>「コピー」ボタンで電子カルテにそのまま貼り付け可能</li>
           </ol>
         </div>
+
+        {/* History Section - 一時的に無効化 */}
+        <div className="mt-8 bg-white rounded-lg shadow-lg border border-pink-200">
+          <div className="bg-pink-50 px-6 py-4 border-b border-pink-200">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-pink-900 flex items-center">
+                <i className="fas fa-history text-pink-600 mr-2"></i>
+                変換履歴
+              </h3>
+            </div>
+          </div>
+          
+          <div className="p-6">
+            <div className="text-center text-pink-500 py-8">
+              <i className="fas fa-tools text-pink-400 mb-3 text-2xl block"></i>
+              <p className="font-medium">履歴機能は現在開発中です</p>
+              <p className="text-sm text-pink-400 mt-1">より良い機能でお届けするため、今後のアップデートをお待ちください</p>
+            </div>
+          </div>
+        </div>
+
+
       </main>
 
       <script src="/static/app.js"></script>

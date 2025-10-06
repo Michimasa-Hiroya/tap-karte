@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "nursing-assistant",
+  "name": "tap-carte",
   "compatibility_date": "2025-10-05", 
   "pages_build_output_dir": "./dist",
   "compatibility_flags": [
@@ -10,7 +10,7 @@
     {
       "binding": "DB",
       "database_name": "nursing-assistant-production",
-      "database_id": "placeholder-for-actual-database-id"
+      "database_id": "070d9777-78b1-46f4-aa4d-61c25b545077"
     }
   ]
 }
