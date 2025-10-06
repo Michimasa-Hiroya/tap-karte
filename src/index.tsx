@@ -753,7 +753,7 @@ app.post('/api/convert', async (c) => {
 `
       : ''
 
-    const prompt = `あなたは看護記録の文章整形専門AIです。入力されたテキストを適切な看護記録に整形してください。
+    const prompt = `あなたは一流の看護師で一流のPT、そして一流の文章編集者です。入力されたテキストを適切な看護記録に整形してください。
 
 # 医療・リハビリ専門用語辞書
 以下の専門用語を理解して記録を作成してください：
@@ -1097,11 +1097,11 @@ app.get('/', (c) => {
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-pink-800">文体</label>
                 <div className="flex space-x-2">
-                  <button id="style-polite" className="px-4 py-2 bg-pink-600 text-white rounded-md text-sm font-medium hover:bg-pink-700 transition-colors">
-                    ですます体
-                  </button>
                   <button id="style-plain" className="px-4 py-2 bg-pink-100 text-pink-700 rounded-md text-sm font-medium hover:bg-pink-200 transition-colors">
                     だ・である体
+                  </button>
+                  <button id="style-polite" className="px-4 py-2 bg-pink-600 text-white rounded-md text-sm font-medium hover:bg-pink-700 transition-colors">
+                    ですます体
                   </button>
                 </div>
               </div>
@@ -1142,10 +1142,10 @@ app.get('/', (c) => {
                 <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-md">
                   <div className="flex items-center space-x-2">
                     <i className="fas fa-exclamation-triangle text-red-500"></i>
-                    <span className="text-sm font-semibold text-red-700">重要な注意</span>
+                    <span className="text-sm font-semibold text-red-700">注意</span>
                   </div>
                   <p className="text-sm text-red-600 mt-1">
-                    個人情報（氏名、住所、生年月日、電話番号など）は絶対に入力しないでください。
+                    個人情報(氏名や住所など)や個人が特定できる情報、珍しい病名などの入力は禁止
                   </p>
                 </div>
                 
