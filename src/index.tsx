@@ -1145,7 +1145,7 @@ app.get('/', (c) => {
                     <span className="text-sm font-semibold text-red-700">注意</span>
                   </div>
                   <p className="text-sm text-red-600 mt-1">
-                    個人情報(氏名や住所など)や個人が特定できる情報、珍しい病名などの入力は禁止
+                    個人情報(氏名や住所など)や個人が特定できる情報、珍しい病名などの入力は禁止します。
                   </p>
                 </div>
                 
@@ -1204,8 +1204,7 @@ app.get('/', (c) => {
           <h3 className="text-lg font-semibold text-pink-900 mb-3">タップカルテの使い方</h3>
           <ol className="list-decimal list-inside space-y-2 text-pink-800">
             <li>思ったことやメモを入力エリアにそのまま入力</li>
-            <li>「生成」ボタンをタップして、プロの看護記録に変換</li>
-            <li>整った看護記録・報告書が自動生成されます</li>
+            <li>生成ボタンをタップして、整った看護記録や報告書が自動生成されます</li>
             <li>「コピー」ボタンで電子カルテにそのまま貼り付け可能</li>
           </ol>
         </div>

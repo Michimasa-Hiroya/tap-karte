@@ -3,7 +3,7 @@
 class NursingAssistant {
     constructor() {
         this.selectedOptions = {
-            style: 'ですます体',
+            style: 'だ・である体',
             docType: '記録',
             format: '文章形式'
         };
@@ -423,7 +423,7 @@ class NursingAssistant {
     
     initializeButtonStates() {
         // Initialize button styles based on default selected options
-        this.selectOption('style', this.selectedOptions.style, 'style-polite', 'style-plain');
+        this.selectOption('style', this.selectedOptions.style, 'style-plain', 'style-polite');
         this.selectOption('docType', this.selectedOptions.docType, 'doc-record', 'doc-report');
         this.selectOption('format', this.selectedOptions.format, 'format-text', 'format-soap');
     }
