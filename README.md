@@ -7,8 +7,10 @@
 - **機能**: 口頭メモや簡単なメモを、整った看護記録・報告書に変換
 - **AIエンジン**: 🚀 **Gemini 2.5 Flash** (2025-10-07 移行完了)
 
-## 本番URL
-- **🌐 プロダクション**: https://8687e7e0.tap-carte.pages.dev
+## URL
+- **🌐 本番環境**: https://6399bd3e.tap-carte.pages.dev ✅ **Gemini API動作確認済み**
+- **🐙 GitHub**: https://github.com/Michimasa-Hiroya/tap-karte
+- **🚀 開発環境**: ローカル開発サーバー対応
 - **📱 モバイル対応**: レスポンシブデザイン完全対応
 
 ## 現在実装済み機能
@@ -103,7 +105,7 @@
 - **ステータス**: ✅ 本番稼働中
 - **プロジェクト名**: tap-carte  
 - **技術スタック**: Hono + TypeScript + Gemini 2.5 Flash + Cloudflare D1
-- **最終更新**: 2025-10-07 (Gemini 2.5 Flash移行完了)
+- **最終更新**: 2025-10-07 (Gemini API設定完了・GitHub連携完了)
 
 ## 技術仕様
 
