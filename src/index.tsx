@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { renderer } from './renderer'
 import { cors } from 'hono/cors'
 import Anthropic from '@anthropic-ai/sdk'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 import { medicalTerms } from './medical-dictionary'
 import { 
   hashPassword, 
@@ -18,7 +19,8 @@ import {
 } from './auth'
 
 type Bindings = {
-  ANTHROPIC_API_KEY: string;
+  ANTHROPIC_API_KEY: string; // バックアップ用
+  GEMINI_API_KEY: string; // メイン AI API
   JWT_SECRET: string; // JWT署名用シークレット
   GOOGLE_CLIENT_ID: string; // Google OAuth用
   DB: D1Database;
@@ -728,15 +730,14 @@ app.post('/api/convert', async (c) => {
       return c.json({ success: false, error: '無効なオプションが選択されています' }, 400)
     }
     
-    const apiKey = c.env?.ANTHROPIC_API_KEY
+    const apiKey = c.env?.GEMINI_API_KEY
     if (!apiKey) {
       errorType = 'config_error'
-      return c.json({ success: false, error: 'Claude APIキーが設定されていません' }, 500)
+      return c.json({ success: false, error: 'Gemini APIキーが設定されていません' }, 500)
     }
     
-    const anthropic = new Anthropic({
-      apiKey: apiKey,
-    })
+    const genAI = new GoogleGenerativeAI(apiKey)
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
     
     // 医療用語辞書をプロンプト用文字列に変換
     const medicalTermsContext = Object.entries(medicalTerms)
@@ -753,71 +754,61 @@ app.post('/api/convert', async (c) => {
 `
       : ''
 
-    const prompt = `あなたは一流の看護師で一流のPT、そして一流の文章編集者です。入力されたテキストを適切な看護記録に整形してください。
+    const prompt = `## 役割と目的
+あなたは経験豊富な看護師・理学療法士・作業療法士で、非公式な観察メモを医療記録基準に適合した看護記録に変換する専門家です。
 
-# 医療・リハビリ専門用語辞書
-以下の専門用語を理解して記録を作成してください：
+## 変換要件
+
+### 基本方針
+- 入力された観察内容のみを使用し、情報を追加・創作しない
+- 医療専門用語を適切に使用し、正確で簡潔な記録を作成する
+- 「患者」は全て「利用者」と表記する
+
+### 医療・リハビリ専門用語（必須参照）
 ${medicalTermsContext}
 
-# 重要な制約
-・入力にない情報は一切追加しない
-・バイタルサインや具体的な数値は創作しない
-・「患者」は「利用者」と表現してください
-・文体は「${style}」で統一
-・フォーマットは「${format}」で出力
-・出力は${maxOutputChars}文字以内で簡潔に
+### 出力仕様
+- **文体**: ${style}
+- **形式**: ${format}
+- **文字制限**: ${maxOutputChars}文字以内
 ${docTypeInstruction}
 
-${format === 'SOAP形式' ? 'SOAP形式では S: O: A: P: の見出しを付けて分類してください。' : ''}
+${format === 'SOAP形式' ? '### SOAP形式の構造\nS: (Subjective) 利用者の主観的情報\nO: (Objective) 客観的観察事実\nA: (Assessment) 評価・分析\nP: (Plan) 計画・方針\n' : ''}
 
-# 記録形式の要件（文章形式の場合）
-${format === '文章形式' ? `
-・「利用者の状態は以下の通りです。」「アナムネージス(既往歴)：」「バイタルサイン：」などの定型的な見出しや項目分けは一切使用しない
-・ADL、リハビリ内容などで項目分けせず、すべて自然な文章として連続的に記述する
-・時系列や重要度順に内容を整理し、読みやすい段落構成で記述する
-・具体的な観察内容、利用者の発言、実施したケア内容を含む自然な記述にする
-・専門用語を適切に使用し、臨床的に正確な表現で記述する
-` : ''}
+${format === '文章形式' ? `### 文章形式の要件
+- 定型的な見出し（「利用者の状態は〜」「バイタルサイン：」等）は使用禁止
+- 時系列順または重要度順で論理的に構成
+- 観察事実、利用者の発言、実施ケアを自然な文章で統合
+- 段落構成を意識し、読みやすさを重視` : ''}
 
-# 文体の詳細指示
-${style === 'だ・である体' ? `
-文体は「だ・である調」で統一してください。以下の形式で記述してください：
-・断定：「〜である」「〜だ」
-・状態：「〜している」「〜がある」
-・観察：「〜が見られる」「〜を認める」
-・継続：「〜を継続する」「〜が必要である」
+### 文体規則
+${style === 'だ・である体' ? `**だ・である調の表現例**
+- 断定: 「〜である」「〜だ」
+- 状態: 「〜している」「〜がある」 
+- 観察: 「〜が見られる」「〜を認める」
+- 継続: 「〜を継続する」「〜が必要である」
 
-例文：「訪室時、利用者に発熱がみられる。状態は安定している。今後も継続的な観察が必要である。リハビリを実施する。」
-` : `
-文体は「ですます調」で統一してください。
-例文：「訪室時、利用者に発熱がみられます。状態は安定しています。今後も継続的な観察が必要です。」
-`}
+参考例文: 「訪室時、利用者に発熱がみられる。状態は安定している。今後も継続的な観察が必要である。」` : `**ですます調の表現例**
+- 「〜みられます」「〜しています」「〜です」「〜必要です」
 
-# 入力テキスト
+参考例文: 「訪室時、利用者に発熱がみられます。状態は安定しています。今後も継続的な観察が必要です。」`}
+
+## 変換対象の観察メモ
 ${sanitizedText}
 
-# 出力
-`
+## 看護記録（上記要件に従って変換）`
     
-    const message = await anthropic.messages.create({
-      model: 'claude-3-haiku-20240307',
-      max_tokens: 2000,
-      temperature: 0.3,
-      messages: [{
-        role: 'user',
-        content: prompt
-      }]
-    })
+    const result = await model.generateContent(prompt)
     
-    if (!message.content || message.content.length === 0) {
-      throw new Error('Claude APIからの応答が空です')
+    if (!result || !result.response) {
+      throw new Error('Gemini APIからの応答が空です')
     }
     
-    const convertedText = message.content[0]?.type === 'text' ? message.content[0].text : null
+    const convertedText = result.response.text()
     
-    if (!convertedText) {
+    if (!convertedText || convertedText.trim().length === 0) {
       errorType = 'api_response_error'
-      throw new Error('Claude APIからテキストを取得できませんでした')
+      throw new Error('Gemini APIからテキストを取得できませんでした')
     }
     
     success = true
