@@ -389,6 +389,7 @@ export const isLocalStorageSupported = (): boolean => {
 // ========================================
 
 import type { User } from '../types'
+import { SECURITY_CONFIG, ENVIRONMENT_INFO } from '../config'
 
 /**
  * デモユーザーを生成
@@ -475,6 +476,151 @@ export const validateDemoAuthToken = (token: string): User | null => {
       token: token.substring(0, 20) + '...'
     })
     return null
+  }
+}
+
+// ========================================
+// 🔐 セキュリティ監査・ログ機能
+// ========================================
+
+/**
+ * APIキー使用状況をログ記録
+ * @param keyType キーの種類
+ * @param operation 操作種別
+ * @param metadata 追加メタデータ
+ */
+export const logApiKeyUsage = (
+  keyType: string, 
+  operation: string, 
+  metadata?: Record<string, any>
+) => {
+  if (SECURITY_CONFIG.audit.logApiUsage) {
+    logger.info('API Key Usage', {
+      keyType,
+      operation,
+      environment: ENVIRONMENT_INFO.current,
+      timestamp: getCurrentTimestamp(),
+      requestId: metadata?.requestId || 'unknown',
+      ...metadata
+    })
+  }
+}
+
+/**
+ * 認証イベントをログ記録
+ * @param event イベント種別
+ * @param userId ユーザーID
+ * @param success 成功フラグ
+ * @param metadata 追加メタデータ
+ */
+export const logAuthEvent = (
+  event: string,
+  userId?: string,
+  success: boolean = true,
+  metadata?: Record<string, any>
+) => {
+  if (SECURITY_CONFIG.audit.logAuthEvents) {
+    const logLevel = success ? 'info' : 'warn'
+    logger[logLevel]('Auth Event', {
+      event,
+      userId: userId || 'anonymous',
+      success,
+      environment: ENVIRONMENT_INFO.current,
+      timestamp: getCurrentTimestamp(),
+      ...metadata
+    })
+  }
+}
+
+/**
+ * セキュリティイベントをログ記録
+ * @param event イベント種別
+ * @param severity 深刻度
+ * @param metadata 追加メタデータ
+ */
+export const logSecurityEvent = (
+  event: string,
+  severity: 'low' | 'medium' | 'high' | 'critical',
+  metadata?: Record<string, any>
+) => {
+  if (SECURITY_CONFIG.audit.logSecurityEvents) {
+    const logLevel = severity === 'critical' || severity === 'high' ? 'error' : 'warn'
+    logger[logLevel]('Security Event', {
+      event,
+      severity,
+      environment: ENVIRONMENT_INFO.current,
+      timestamp: getCurrentTimestamp(),
+      needsAttention: severity === 'critical' || severity === 'high',
+      ...metadata
+    })
+  }
+}
+
+
+
+/**
+ * 異常アクセス検知
+ * @param request リクエスト情報
+ * @returns 異常判定結果
+ */
+export const detectAnomalousAccess = (request: {
+  ip?: string
+  userAgent?: string
+  path: string
+  method: string
+}): {
+  isAnomalous: boolean
+  reasons: string[]
+  riskLevel: 'low' | 'medium' | 'high'
+} => {
+  const reasons: string[] = []
+  let riskLevel: 'low' | 'medium' | 'high' = 'low'
+  
+  // SQLインジェクションパターン検知
+  const sqlPatterns = /(union\s+select|drop\s+table|insert\s+into|delete\s+from)/i
+  if (sqlPatterns.test(request.path)) {
+    reasons.push('SQL injection pattern detected')
+    riskLevel = 'high'
+  }
+  
+  // XSS パターン検知
+  const xssPatterns = /(<script|javascript:|onload=|onerror=)/i
+  if (xssPatterns.test(request.path)) {
+    reasons.push('XSS pattern detected')
+    riskLevel = 'high'
+  }
+  
+  // パストラバーサル検知
+  if (request.path.includes('../') || request.path.includes('..\\')) {
+    reasons.push('Path traversal attempt')
+    riskLevel = 'medium'
+  }
+  
+  // 異常なUser-Agent検知
+  if (request.userAgent) {
+    const suspiciousUAPatterns = /(bot|crawler|scanner|sqlmap|nikto|nmap)/i
+    if (suspiciousUAPatterns.test(request.userAgent)) {
+      reasons.push('Suspicious user agent')
+      riskLevel = riskLevel === 'high' ? 'high' : 'medium'
+    }
+  }
+  
+  const isAnomalous = reasons.length > 0
+  
+  if (isAnomalous) {
+    logSecurityEvent('Anomalous Access Detected', riskLevel, {
+      path: request.path,
+      method: request.method,
+      ip: request.ip?.substring(0, 10) + '...', // IPの一部のみログ
+      reasons,
+      userAgent: request.userAgent?.substring(0, 50)
+    })
+  }
+  
+  return {
+    isAnomalous,
+    reasons,
+    riskLevel
   }
 }
 

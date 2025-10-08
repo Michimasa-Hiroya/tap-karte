@@ -17,6 +17,11 @@ export type Environment = 'development' | 'staging' | 'production'
 export const getCurrentEnvironment = (): Environment => {
   // Cloudflare Pagesの環境判定
   if (typeof globalThis !== 'undefined' && 'CF_PAGES' in globalThis) {
+    // プレビュー環境 vs 本番環境の判定
+    const branch = (globalThis as any).CF_PAGES_BRANCH
+    if (branch && branch !== 'main') {
+      return 'staging'
+    }
     return 'production'
   }
   
@@ -26,6 +31,14 @@ export const getCurrentEnvironment = (): Environment => {
   }
   
   return 'production'
+}
+
+/** 環境情報 */
+export const ENVIRONMENT_INFO = {
+  current: getCurrentEnvironment(),
+  isDevelopment: getCurrentEnvironment() === 'development',
+  isStaging: getCurrentEnvironment() === 'staging', 
+  isProduction: getCurrentEnvironment() === 'production'
 }
 
 // ========================================
@@ -114,8 +127,8 @@ export const AI_CONFIG = {
 
 /** セキュリティ設定 */
 export const SECURITY_CONFIG = {
-  /** JWT有効期限（秒） */
-  jwtExpirationTime: 24 * 60 * 60, // 24時間
+  /** JWT有効期限（秒） - 環境別 */
+  jwtExpirationTime: ENVIRONMENT_INFO.isDevelopment ? 1 * 60 * 60 : 24 * 60 * 60, // 開発:1時間、本番:24時間
   
   /** セッション延長間隔（ミリ秒） */
   sessionRefreshInterval: 30 * 60 * 1000, // 30分
@@ -123,15 +136,43 @@ export const SECURITY_CONFIG = {
   /** セッション監視間隔（ミリ秒） */
   sessionCheckInterval: 5 * 60 * 1000, // 5分
   
-  /** 個人情報検出パターン */
+  /** レート制限 - 環境別 */
+  rateLimit: {
+    api: ENVIRONMENT_INFO.isDevelopment ? 10 : 100, // 開発:10/min、本番:100/min
+    auth: ENVIRONMENT_INFO.isDevelopment ? 3 : 10,  // 開発:3/min、本番:10/min
+    windowMs: 60 * 1000 // 1分間
+  },
+  
+  /** API使用制限 - 環境別 */
+  apiLimits: {
+    maxRequestsPerHour: ENVIRONMENT_INFO.isDevelopment ? 100 : 1000,
+    maxTokensPerDay: ENVIRONMENT_INFO.isDevelopment ? 10000 : 100000,
+    maxConcurrentRequests: ENVIRONMENT_INFO.isDevelopment ? 2 : 10
+  },
+  
+  /** 個人情報検出パターン（医療特化） */
   personalInfoPatterns: [
     /\d{4}-\d{4}-\d{4}-\d{4}/, // クレジットカード番号
     /\d{3}-\d{4}-\d{4}/, // 電話番号
     /〒\d{3}-\d{4}/, // 郵便番号
+    /患者.*?[田中佐藤鈴木高橋田邉渡辺伊藤山本中村小林加藤吉田山田松本井上木村林斎藤清水山崎阿部森池田橋本山口石川小川中島前田藤田岡田長谷川村上近藤石井齊藤坂本遠藤青木櫻井武田山下野口松井千葉岩田豊田原田中野小野田村竹内和田中山石田上田森田原小島酒井宮崎梅田太田藤井中川村井千原松尾北村]/, // 患者名（一般的な姓）
+    /\d{4}年\d{1,2}月\d{1,2}日.*?生/, // 生年月日
+    /保険証.*?\d{8}/, // 保険証番号
   ],
   
-  /** CSPヘッダー */
-  cspHeader: "default-src 'self' https:; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' https: data:; font-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self';"
+  /** CSPヘッダー - 環境別 */
+  cspHeader: ENVIRONMENT_INFO.isDevelopment 
+    ? "default-src 'self' 'unsafe-inline' 'unsafe-eval' *; script-src 'self' 'unsafe-inline' 'unsafe-eval' *; style-src 'self' 'unsafe-inline' *; img-src 'self' data: *;"
+    : "default-src 'self' https:; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' https: data:; font-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self';",
+  
+  /** 監査ログ設定 */
+  audit: {
+    enabled: ENVIRONMENT_INFO.isProduction,
+    logApiUsage: true,
+    logAuthEvents: true,
+    logSecurityEvents: true,
+    retentionDays: ENVIRONMENT_INFO.isProduction ? 90 : 7
+  }
 } as const
 
 // ========================================

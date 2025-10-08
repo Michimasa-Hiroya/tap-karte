@@ -24,7 +24,10 @@ import {
   optionalAuth,
   errorHandler,
   notFoundHandler,
-  rateLimit
+  rateLimit,
+  securityAnomalyDetection,
+  apiUsageMonitoring,
+  inputSecurityValidation
 } from './middleware'
 
 // ルート
@@ -52,6 +55,11 @@ app.use(renderer)
 app.use('*', securityHeaders())
 app.use('/api/*', corsSettings())
 app.use('/api/*', inputValidation())
+
+// 高度セキュリティミドルウェア
+app.use('*', securityAnomalyDetection())
+app.use('/api/*', apiUsageMonitoring())
+app.use('/api/*', inputSecurityValidation())
 
 // ログ・監視ミドルウェア
 app.use('*', requestLogging())

@@ -1,0 +1,50 @@
+# GitHub Dependabot設定
+# 依存関係の脆弱性を自動検出・修正提案
+version: 2
+updates:
+  # NPMパッケージの監視
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday" 
+      time: "09:00"
+      timezone: "Asia/Tokyo"
+    # セキュリティ更新のみを自動マージ
+    open-pull-requests-limit: 5
+    reviewers:
+      - "Michimasa-Hiroya"
+    assignees:
+      - "Michimasa-Hiroya"
+    commit-message:
+      prefix: "🔒 [Security]"
+      include: "scope"
+    # 脆弱性レベル設定
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    # 重要なセキュリティ更新は即座に
+    labels:
+      - "security"
+      - "dependencies"
+    milestone: 1
+
+  # GitHub Actions の監視
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "10:00"
+      timezone: "Asia/Tokyo"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "Michimasa-Hiroya"
+    assignees:
+      - "Michimasa-Hiroya"
+    commit-message:
+      prefix: "🔒 [Actions]"
+      include: "scope"
+    labels:
+      - "github-actions"
+      - "security"

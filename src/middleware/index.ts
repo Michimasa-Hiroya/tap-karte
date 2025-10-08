@@ -7,7 +7,7 @@
 import { Context, Next } from 'hono'
 import type { CloudflareBindings, ApiError, LogEntry } from '../types'
 import { SECURITY_CONFIG, DEBUG_CONFIG } from '../config'
-import { logger, getCurrentTimestamp, detectPersonalInfo } from '../utils'
+import { logger, getCurrentTimestamp, detectPersonalInfo, logSecurityEvent, detectAnomalousAccess, logApiKeyUsage } from '../utils'
 
 // ========================================
 // 🔐 セキュリティミドルウェア
@@ -68,7 +68,8 @@ export const corsSettings = () => {
 export const inputValidation = () => {
   return async (c: Context, next: Next) => {
     // POSTリクエストの入力検証
-    if (c.req.method === 'POST' && c.req.header('Content-Type')?.includes('application/json')) {
+    const contentType = c.req.header('Content-Type') || ''
+    if (c.req.method === 'POST' && contentType.includes('application/json')) {
       try {
         const body = await c.req.json()
         
@@ -334,6 +335,144 @@ export const rateLimit = (
         if (data.windowStart < cutoff) {
           requests.delete(ip)
         }
+      }
+    }
+    
+    await next()
+  }
+}
+
+// ========================================
+// 🛡️ 高度セキュリティミドルウェア
+// ========================================
+
+/**
+ * セキュリティ異常検知ミドルウェア（簡易版）
+ */
+export const securityAnomalyDetection = () => {
+  return async (c: Context, next: Next) => {
+    const clientIp = c.req.header('CF-Connecting-IP') || 
+                    c.req.header('X-Forwarded-For') || 
+                    'unknown'
+    const userAgent = c.req.header('User-Agent') || ''
+    const path = c.req.path
+    
+    // 基本的な異常パターンチェック
+    const suspiciousPatterns = [
+      /(<script|javascript:|onload|onerror)/i,
+      /(union|select|insert|delete|drop|exec)/i,
+      /(\.\.\/|\.\.\\|\/etc\/|\/var\/)/i
+    ]
+    
+    const isSuspicious = suspiciousPatterns.some(pattern => 
+      pattern.test(path) || pattern.test(userAgent)
+    )
+    
+    if (isSuspicious) {
+      logger.warn('Suspicious request detected', {
+        clientIp,
+        path,
+        userAgent: userAgent.substring(0, 100)
+      })
+      
+      // 明らかに悪意のあるリクエストはブロック
+      if (path.includes('<script') || path.includes('javascript:')) {
+        return c.json({
+          success: false,
+          error: 'セキュリティ上の理由によりリクエストが拒否されました'
+        }, 403)
+      }
+    }
+    
+    await next()
+  }
+}
+
+/**
+ * API使用量監視ミドルウェア（簡易版）
+ */
+export const apiUsageMonitoring = () => {
+  return async (c: Context, next: Next) => {
+    const clientIp = c.req.header('CF-Connecting-IP') || 
+                    c.req.header('X-Forwarded-For') || 
+                    'unknown'
+    const path = c.req.path
+    const startTime = Date.now()
+    
+    // API使用量をログに記録
+    if (path.startsWith('/api/')) {
+      logger.debug('API request', {
+        endpoint: path,
+        clientIp,
+        method: c.req.method,
+        timestamp: getCurrentTimestamp()
+      })
+    }
+    
+    await next()
+    
+    const duration = Date.now() - startTime
+    
+    // 異常に遅いレスポンスを検知
+    if (duration > 5000) { // 5秒以上
+      logger.warn('Slow API response detected', {
+        path,
+        duration,
+        clientIp,
+        threshold: 5000
+      })
+    }
+  }
+}
+
+/**
+ * 入力セキュリティ検証ミドルウェア（簡易版）
+ */
+export const inputSecurityValidation = () => {
+  return async (c: Context, next: Next) => {
+    const clientIp = c.req.header('CF-Connecting-IP') || 
+                    c.req.header('X-Forwarded-For') || 
+                    'unknown'
+    
+    // POSTリクエストの基本セキュリティ検証
+    const contentType = c.req.header('Content-Type') || ''
+    if (c.req.method === 'POST' && contentType.includes('application/json')) {
+      try {
+        const body = c.get('validatedBody') || await c.req.json()
+        
+        // 入力データの基本検証
+        for (const [key, value] of Object.entries(body)) {
+          if (typeof value === 'string') {
+            // 悪意のあるコンテンツの基本検証
+            const maliciousPatterns = [
+              /<script/gi,
+              /javascript:/gi,
+              /onload|onerror|onclick/gi,
+              /eval\s*\(/gi
+            ]
+            
+            for (const pattern of maliciousPatterns) {
+              if (pattern.test(value)) {
+                logger.warn('Malicious content detected', {
+                  field: key,
+                  pattern: pattern.toString(),
+                  clientIp
+                })
+                
+                return c.json({
+                  success: false,
+                  error: '不正なスクリプトまたは危険なコンテンツが検出されました'
+                }, 400)
+              }
+            }
+          }
+        }
+        
+      } catch (error) {
+        logger.warn('Input validation error', {
+          error: (error as Error).message,
+          clientIp
+        })
       }
     }
     
