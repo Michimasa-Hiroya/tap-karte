@@ -1005,6 +1005,10 @@ app.get('/', (c) => {
               </button>
               
               <div className="mt-4 text-xs text-gray-500">
+                <div className="mb-2 p-2 bg-blue-50 border border-blue-200 rounded text-blue-700">
+                  <p className="font-semibold mb-1">🧪 テスト環境</p>
+                  <p>現在はデモ用ログインが動作します。本格運用には Google OAuth の設定が必要です。</p>
+                </div>
                 <p>ログインすることで、<a href="#privacy-policy" className="text-pink-600 hover:text-pink-800 underline">プライバシーポリシー</a>に同意したものとみなされます。</p>
               </div>
             </div>
