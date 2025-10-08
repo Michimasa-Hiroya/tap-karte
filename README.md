@@ -35,10 +35,10 @@
    - **CORS対策**: クロスオリジン攻撃防御
 
 4. **👤 ユーザー管理**
-   - **メール+パスワード認証**: 標準ログイン機能
-   - **Google OAuth**: ワンクリックログイン
-   - **個別履歴管理**: ユーザー別変換履歴保存 (開発中)
-   - **セッション管理**: 自動ログイン維持
+   - **Google OAuth専用認証**: 🎯 **2025-10-08 メール認証廃止・Google専用化完了**
+   - **段階的本格運営**: デモ認証→実Google OAuth自動切り替え
+   - **ピンクテーマ化**: 🎨 ログインボタンをピンクテーマに統一
+   - **セッション管理**: JWT + 自動ログイン維持
 
 5. **🎨 UI/UX**
    - **直感的操作**: 2分割レイアウト（入力/出力エリア）
@@ -57,12 +57,11 @@
   - `format`: "文章形式" / "SOAP形式"
   - `charLimit`: 100-1000文字
 
-### 認証関連
-- **POST `/api/auth/register`** - ユーザー登録
-- **POST `/api/auth/login`** - ログイン
-- **POST `/api/auth/google`** - Google OAuth認証
+### 認証関連 (Google OAuth専用)
+- **POST `/api/auth/google`** - Google OAuth認証 (メイン)
+- **GET `/api/auth/google-config`** - Google Client ID設定取得
+- **GET `/api/auth/me`** - 現在のユーザー情報取得
 - **POST `/api/auth/logout`** - ログアウト
-- **GET `/api/auth/verify`** - トークン検証
 
 ## データアーキテクチャ
 - **AIエンジン**: Google Gemini 2.5 Flash API
@@ -105,7 +104,7 @@
 - **ステータス**: ✅ 本番稼働中
 - **プロジェクト名**: tap-carte  
 - **技術スタック**: Hono + TypeScript + Gemini 2.5 Flash + Cloudflare D1
-- **最終更新**: 2025-10-07 (Gemini API設定完了・GitHub連携完了)
+- **最終更新**: 2025-10-08 (Google OAuth専用化・段階的本格運営対応完了)
 
 ## 技術仕様
 
@@ -113,8 +112,31 @@
 ```bash
 GEMINI_API_KEY=your_gemini_api_key
 JWT_SECRET=your_jwt_secret
-GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_ID=your_google_client_id  # 🎯 本格運営必須
 ```
+
+### 🚀 Google OAuth本格運営設定
+
+#### ステップ1: Google Cloud Console設定
+1. [Google Cloud Console](https://console.cloud.google.com/)でプロジェクト作成
+2. Google People API有効化
+3. OAuth 2.0クライアントID作成
+4. 承認済みリダイレクトURI設定:
+   ```
+   https://tap-carte.pages.dev
+   https://main.tap-carte.pages.dev
+   ```
+
+#### ステップ2: Cloudflare環境変数設定
+```bash
+# 実際のGoogle Client IDを設定
+npx wrangler pages secret put GOOGLE_CLIENT_ID --project-name tap-carte
+
+# JWT秘密鍵を設定
+npx wrangler pages secret put JWT_SECRET --project-name tap-carte
+```
+
+📋 **詳細手順**: `GOOGLE_OAUTH_SETUP.md` を参照
 
 ### ローカル開発
 ```bash
@@ -132,19 +154,33 @@ npx wrangler pages deploy dist --project-name tap-carte
 ```
 
 ## 実装完了アーキテクチャ
-- ✅ **認証システム**: JWT + Google OAuth
+- ✅ **認証システム**: Google OAuth専用 (2025-10-08 完全移行完了)
+- ✅ **段階的本格運営**: デモ認証↔実認証の自動切り替え機能
+- ✅ **ピンクテーマUI**: 医療現場に適した優しい色調統一
 - ✅ **データベース**: Cloudflare D1 SQLite
 - ✅ **AIエンジン**: Gemini 2.5 Flash (最新)
-- ✅ **セキュリティ**: 個人情報検出・暗号化
-- ✅ **レスポンシブUI**: 全デバイス対応
+- ✅ **セキュリティ**: 個人情報検出・JWT暗号化
 - ✅ **本番デプロイ**: Cloudflare Pages稼働中
+
+## 段階的本格運営への移行状況
+
+### ✅ 完了済み (2025-10-08)
+- Google OAuth認証システム実装
+- デモ認証とリアル認証の自動切り替え
+- ピンク色テーマのログインUI
+- 環境変数による本番設定切り替え
+- Google Cloud Console設定ガイド作成
+
+### ⏳ 設定待ち (ユーザー操作必要)
+- Google Cloud Console OAuth設定
+- Cloudflare環境変数設定 (GOOGLE_CLIENT_ID)
+- 本番環境での実Google OAuth動作テスト
 
 ## 今後の拡張候補
 - [ ] 履歴機能UI実装 (バックエンド完成済み)
 - [ ] 音声入力対応 (Web Speech API)
 - [ ] テンプレート機能
 - [ ] PDF/Word出力
-- [ ] 使用状況分析ダッシュボード
 
 ---
 **🏥 医療従事者の皆様の業務効率化をサポートします**

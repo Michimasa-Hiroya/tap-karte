@@ -122,7 +122,12 @@ class GoogleAuth {
             if (response.ok) {
                 const data = await response.json();
                 console.log('[GoogleAuth] Server response:', data);
-                return data.clientId;
+                
+                // 実際のClient IDかテスト用かをチェック
+                if (data.clientId && data.clientId !== 'your-google-client-id-here') {
+                    console.log('[GoogleAuth] Using production Client ID');
+                    return data.clientId;
+                }
             } else {
                 console.warn('[GoogleAuth] Server request failed:', response.status, response.statusText);
             }
@@ -279,12 +284,52 @@ class GoogleAuth {
             
             console.log('[GoogleAuth] Attempting to show Google One Tap...');
             
-            // デモ用の模擬認証（実際のGoogleログインの代替）
-            this.showDemoLogin();
+            // 実際のGoogle認証またはデモ認証
+            if (this.isProductionMode()) {
+                this.showRealGoogleLogin();
+            } else {
+                this.showDemoLogin();
+            }
             
         } catch (error) {
             console.error('[GoogleAuth] Google login error:', error);
             this.showError('Googleログインに失敗しました: ' + error.message);
+        }
+    }
+    
+    // 本番環境かどうかの判定
+    isProductionMode() {
+        // 実際のGoogle Client IDが設定されているかチェック
+        return this.googleClientId && 
+               this.googleClientId !== '1234567890-abcdefghijklmnopqrstuvwxyz1234567890.apps.googleusercontent.com' &&
+               !this.googleClientId.includes('test') &&
+               !this.googleClientId.includes('demo');
+    }
+    
+    // 実際のGoogleログイン
+    showRealGoogleLogin() {
+        try {
+            console.log('[GoogleAuth] Starting real Google authentication...');
+            
+            // Google One Tap認証を表示
+            google.accounts.id.prompt((notification) => {
+                console.log('[GoogleAuth] Google prompt notification:', notification);
+                if (notification.isNotDisplayed()) {
+                    const reason = notification.getNotDisplayedReason();
+                    console.log('[GoogleAuth] Google One Tap not displayed, reason:', reason);
+                    
+                    // フォールバック: ポップアップサインイン
+                    this.showGoogleSignInPopup();
+                } else if (notification.isSkippedMoment()) {
+                    console.log('[GoogleAuth] User skipped the moment');
+                } else if (notification.isDismissedMoment()) {
+                    console.log('[GoogleAuth] User dismissed the moment');
+                }
+            });
+            
+        } catch (error) {
+            console.error('[GoogleAuth] Real Google login error:', error);
+            this.showError('Google認証でエラーが発生しました: ' + error.message);
         }
     }
     
@@ -296,7 +341,7 @@ class GoogleAuth {
         const mockGoogleUser = {
             email: 'demo@example.com',
             name: 'デモユーザー',
-            picture: 'https://ui-avatars.com/api/?name=Demo+User&background=3b82f6&color=fff&size=128'
+            picture: 'https://ui-avatars.com/api/?name=Demo+User&background=f472b6&color=fff&size=128'
         };
         
         // UIを認証済み状態に更新
@@ -305,6 +350,7 @@ class GoogleAuth {
         
         // ローカルストレージに保存
         localStorage.setItem('auth_token', this.authToken);
+        localStorage.setItem('demo_user', JSON.stringify(mockGoogleUser));
         
         // UI更新
         this.showAuthenticatedUI();
