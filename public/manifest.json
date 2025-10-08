@@ -1,0 +1,44 @@
+{
+  "name": "タップカルテ - 思ったことを、そのままカルテに",
+  "short_name": "タップカルテ",
+  "description": "看護・介護記録をAIで効率化するWebアプリ",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fdf2f8",
+  "theme_color": "#f472b6",
+  "orientation": "portrait-primary",
+  "categories": ["medical", "productivity", "utilities"],
+  "lang": "ja",
+  "icons": [
+    {
+      "src": "https://page.gensparksite.com/v1/base64_upload/e0e0839ca795c5577a86e6b90d5285a3",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://page.gensparksite.com/v1/base64_upload/e0e0839ca795c5577a86e6b90d5285a3",
+      "sizes": "512x512", 
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "https://page.gensparksite.com/v1/base64_upload/e0e0839ca795c5577a86e6b90d5285a3",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "タップカルテ メイン画面"
+    }
+  ],
+  "prefer_related_applications": false,
+  "protocol_handlers": [
+    {
+      "protocol": "web+tapkarte",
+      "url": "/auth/callback?code=%s"
+    }
+  ],
+  "scope": "/",
+  "id": "tap-carte-pwa"
+}

@@ -41,14 +41,15 @@ app.use('*', async (c, next) => {
   // HTTPS強制とセキュリティ強化
   c.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload')
   
-  // CSP (Content Security Policy) - XSS攻撃防御
+  // CSP (Content Security Policy) - XSS攻撃防御 (Google API対応)
   c.header('Content-Security-Policy', 
     "default-src 'self' https:; " +
-    "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; " +
+    "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://accounts.google.com; " +
     "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
-    "img-src 'self' https:; " +
+    "img-src 'self' https: data:; " +
     "font-src 'self' https://cdn.jsdelivr.net; " +
-    "connect-src 'self' https:; " +
+    "connect-src 'self' https: https://accounts.google.com; " +
+    "frame-src https://accounts.google.com; " +
     "object-src 'none'; " +
     "base-uri 'self'; " +
     "form-action 'self';"
@@ -643,6 +644,131 @@ app.get('/api/auth/google-config', async (c) => {
   })
 })
 
+// Google OAuth コールバック処理
+app.get('/api/auth/google/callback', async (c) => {
+  try {
+    const code = c.req.query('code')
+    const state = c.req.query('state')
+    const error = c.req.query('error')
+    
+    if (error) {
+      console.error('OAuth error:', error)
+      return c.redirect('/?error=' + encodeURIComponent(error))
+    }
+    
+    if (!code) {
+      return c.redirect('/?error=no_code')
+    }
+    
+    // Google OAuth トークン交換
+    const clientId = c.env?.GOOGLE_CLIENT_ID
+    const clientSecret = c.env?.GOOGLE_CLIENT_SECRET
+    
+    if (!clientId) {
+      return c.redirect('/?error=config_missing')
+    }
+    
+    const tokenUrl = 'https://oauth2.googleapis.com/token'
+    const redirectUri = new URL(c.req.url).origin
+    
+    const tokenResponse = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        code: code,
+        client_id: clientId,
+        client_secret: clientSecret || '', // Client Secretが設定されていない場合は空文字
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code'
+      })
+    })
+    
+    const tokenData = await tokenResponse.json()
+    
+    if (!tokenResponse.ok) {
+      console.error('Token exchange failed:', tokenData)
+      return c.redirect('/?error=token_exchange_failed')
+    }
+    
+    // ユーザー情報取得
+    const userResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: {
+        'Authorization': `Bearer ${tokenData.access_token}`
+      }
+    })
+    
+    const userData = await userResponse.json()
+    
+    if (!userResponse.ok) {
+      console.error('User info fetch failed:', userData)
+      return c.redirect('/?error=user_info_failed')
+    }
+    
+    // JWTトークン生成
+    const payload = {
+      sub: userData.id,
+      email: userData.email,
+      name: userData.name,
+      picture: userData.picture,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24時間
+    }
+    
+    const jwtSecret = c.env?.JWT_SECRET || 'default-secret-key'
+    const token = await sign(payload, jwtSecret)
+    
+    // 成功時のリダイレクト（認証情報をクエリパラメータで渡す）
+    return c.redirect(`/?auth_success=1&token=${token}`)
+    
+  } catch (error) {
+    console.error('OAuth callback error:', error)
+    return c.redirect('/?error=callback_error')
+  }
+})
+
+// セッション延長API
+app.post('/api/auth/refresh', async (c) => {
+  try {
+    const session = await getSessionFromRequest(c, c.env?.JWT_SECRET)
+    
+    if (!session || !session.email) {
+      return c.json({ success: false, error: '認証が必要です' }, 401)
+    }
+    
+    // 新しいJWTトークンを生成（24時間延長）
+    const payload = {
+      sub: session.sub,
+      email: session.email,
+      name: session.name,
+      picture: session.picture,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24時間
+    }
+    
+    const jwtSecret = c.env?.JWT_SECRET || 'default-secret-key'
+    const newToken = await sign(payload, jwtSecret)
+    
+    console.log('Session refreshed for user:', session.email)
+    
+    return c.json({
+      success: true,
+      token: newToken,
+      user: {
+        id: session.sub,
+        email: session.email,
+        display_name: session.name,
+        profile_image: session.picture
+      }
+    })
+    
+  } catch (error) {
+    console.error('Session refresh error:', error)
+    return c.json({ success: false, error: 'セッション延長に失敗しました' }, 500)
+  }
+})
+
 // 現在のユーザー情報取得
 app.get('/api/auth/me', async (c) => {
   try {
@@ -1004,7 +1130,25 @@ app.get('/', (c) => {
                 <span>Googleでログイン</span>
               </button>
               
+              <button 
+                id="force-real-auth-btn" 
+                className="w-full mt-3 px-4 py-2 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-all text-green-800 text-sm font-medium"
+              >
+                🚀 本番Google認証を強制実行
+              </button>
+              
+              <button 
+                id="mobile-demo-auth-btn" 
+                className="w-full mt-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-all text-blue-800 text-sm font-medium"
+              >
+                📱 モバイル専用デモ認証
+              </button>
+              
               <div className="mt-4 text-xs text-gray-500">
+                <div className="mb-2 p-2 bg-orange-50 border border-orange-200 rounded text-orange-700">
+                  <p className="font-semibold mb-1">📱 モバイル環境について</p>
+                  <p>モバイルブラウザではGoogleのセキュリティ制限により、OAuth認証に制限があります。「モバイル専用デモ認証」をお試しください。</p>
+                </div>
                 <div className="mb-2 p-2 bg-blue-50 border border-blue-200 rounded text-blue-700">
                   <p className="font-semibold mb-1">🧪 テスト環境</p>
                   <p>現在はデモ用ログインが動作します。本格運用には Google OAuth の設定が必要です。</p>
