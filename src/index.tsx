@@ -632,6 +632,17 @@ app.post('/api/auth/google', async (c) => {
   }
 })
 
+// Google OAuth設定取得
+app.get('/api/auth/google-config', async (c) => {
+  // Google OAuth Client IDを返す
+  const clientId = c.env?.GOOGLE_CLIENT_ID || '388638501823-sv6e46462k3f7b57mfltv5r9o9dbh4el.apps.googleusercontent.com'
+  
+  return c.json({
+    success: true,
+    clientId: clientId
+  })
+})
+
 // 現在のユーザー情報取得
 app.get('/api/auth/me', async (c) => {
   try {
@@ -953,13 +964,11 @@ app.get('/', (c) => {
                 </div>
               </div>
               
-              {/* ログインボタン */}
-              <div id="auth-buttons" className="flex space-x-1">
-                <button id="login-btn" className="px-2 py-1 text-pink-700 border border-pink-300 rounded-md text-xs font-medium cursor-not-allowed opacity-60" disabled>
-                  ログイン
-                </button>
-                <button id="register-btn" className="px-2 py-1 bg-pink-600 text-white rounded-md text-xs font-medium cursor-not-allowed opacity-60" disabled>
-                  新規登録
+              {/* Googleログインボタン */}
+              <div id="auth-buttons">
+                <button id="login-btn" className="px-3 py-1 bg-blue-600 text-white rounded-md text-xs font-medium hover:bg-blue-700 transition-colors flex items-center space-x-1">
+                  <i className="fab fa-google"></i>
+                  <span>ログイン</span>
                 </button>
               </div>
             </div>
@@ -967,79 +976,36 @@ app.get('/', (c) => {
         </div>
       </header>
       
-      {/* ログイン・登録モーダル */}
+      {/* Google認証モーダル */}
       <div id="auth-modal" className="hidden fixed inset-0 bg-black bg-opacity-50 z-50">
         <div className="flex items-center justify-center min-h-screen p-4">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <div className="flex justify-between items-center mb-6">
-              <h2 id="modal-title" className="text-xl font-bold text-pink-800">ログイン</h2>
+              <h2 className="text-xl font-bold text-pink-800">ログイン</h2>
               <button id="close-modal" className="text-gray-500 hover:text-gray-700">
                 <i className="fas fa-times"></i>
               </button>
             </div>
             
-            {/* ログイン・登録フォーム */}
-            <div id="auth-form">
-              <form id="login-form">
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">メールアドレス</label>
-                    <input 
-                      type="email" 
-                      id="auth-email" 
-                      required 
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">パスワード</label>
-                    <input 
-                      type="password" 
-                      id="auth-password" 
-                      required 
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
-                    />
-                  </div>
-                  
-                  <div id="register-fields" className="hidden space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">表示名</label>
-                      <input 
-                        type="text" 
-                        id="auth-display-name" 
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div id="auth-error" className="hidden text-red-600 text-sm"></div>
-                  
-                  <button 
-                    type="submit" 
-                    id="auth-submit" 
-                    className="w-full px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 transition-colors"
-                  >
-                    ログイン
-                  </button>
-                </div>
-              </form>
-              
-              <div className="mt-4">
-                <div className="text-center text-gray-500 text-sm mb-3">または</div>
-                <button 
-                  id="google-login-btn" 
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors flex items-center justify-center space-x-2"
-                >
-                  <i className="fab fa-google text-red-500"></i>
-                  <span>Googleでログイン</span>
-                </button>
+            <div className="text-center mb-6">
+              <div className="mb-4">
+                <i className="fab fa-google text-4xl text-blue-500 mb-3 block"></i>
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">Googleアカウントでログイン</h3>
+                <p className="text-sm text-gray-500">安全で簡単なGoogleアカウント認証</p>
               </div>
               
-              <div className="mt-4 text-center">
-                <button id="toggle-auth-mode" className="text-pink-600 hover:text-pink-800 text-sm">
-                  アカウントをお持ちでない場合は新規登録
-                </button>
+              <div id="auth-error" className="hidden text-red-600 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded-md"></div>
+              
+              <button 
+                id="google-login-btn" 
+                className="w-full px-6 py-3 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-blue-400 transition-all flex items-center justify-center space-x-3 text-gray-700 font-medium shadow-sm"
+              >
+                <i className="fab fa-google text-xl text-blue-500"></i>
+                <span>Googleでログイン</span>
+              </button>
+              
+              <div className="mt-4 text-xs text-gray-500">
+                <p>ログインすることで、<a href="#privacy-policy" className="text-pink-600 hover:text-pink-800 underline">プライバシーポリシー</a>に同意したものとみなされます。</p>
               </div>
             </div>
           </div>
@@ -1251,6 +1217,7 @@ app.get('/', (c) => {
 
       </main>
 
+      <script src="/static/google-auth.js"></script>
       <script src="/static/app.js"></script>
     </div>
   )
