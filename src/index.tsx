@@ -1195,30 +1195,19 @@ app.get('/', (c) => {
             <li>生成ボタンをタップして、整った看護記録や報告書が自動生成</li>
             <li>「コピー」ボタンで電子カルテにそのまま貼り付け可能</li>
           </ol>
+          <div className="mt-4 p-3 bg-white border border-pink-200 rounded-md">
+            <div className="flex items-center space-x-2 mb-2">
+              <i className="fas fa-shield-alt text-pink-600"></i>
+              <span className="font-semibold text-pink-800 text-sm">プライバシー保護</span>
+            </div>
+            <p className="text-xs text-pink-600">
+              入力内容は処理後即座に削除され、履歴は一切保存されません。
+              <a href="#privacy-policy" className="text-pink-700 hover:text-pink-900 underline ml-1">詳細はプライバシーポリシーをご覧ください</a>
+            </p>
+          </div>
         </div>
 
-        {/* History Section - 一時的に無効化 */}
-        <div className="mt-8 bg-white rounded-lg shadow-lg border border-pink-200">
-          <div className="bg-pink-50 px-6 py-4 border-b border-pink-200">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-pink-900 flex items-center">
-                <i className="fas fa-history text-pink-600 mr-2"></i>
-                変換履歴
-              </h3>
-            </div>
-          </div>
-          
-          <div className="p-6">
-            <div className="text-center text-pink-500 py-8">
-              <i className="fas fa-shield-alt text-pink-400 mb-3 text-2xl block"></i>
-              <p className="font-medium">プライバシー最優先設計により履歴は保存されません</p>
-              <p className="text-sm text-pink-400 mt-1">あなたの入力内容は処理後すぐにメモリから完全に消去され、誰も後から確認することはできません</p>
-              <div className="mt-4">
-                <a href="#privacy-policy" className="text-pink-600 hover:text-pink-800 text-xs underline">プライバシーポリシーの詳細</a>
-              </div>
-            </div>
-          </div>
-        </div>
+
 
         {/* プライバシーポリシーセクション */}
         <div id="privacy-policy" className="mt-12 bg-white rounded-lg shadow-lg border border-pink-200">
@@ -1229,43 +1218,42 @@ app.get('/', (c) => {
             </h3>
           </div>
           
-          <div className="p-6 space-y-6 text-sm text-gray-700">
+          <div className="p-6 space-y-4 text-sm text-gray-700">
             <div>
-              <h4 className="font-semibold text-pink-800 mb-2">🔒 1. データを一切保存しない設計</h4>
-              <p>ユーザーの入力内容は、サーバーやブラウザ、ログに一切保存されません。データは文章生成のためだけに一時的にメモリ上で処理され、完了後すぐに破棄されます。これにより、開発者を含め誰も後から履歴を確認することはできません。</p>
+              <h4 className="font-semibold text-pink-800 mb-2">🔒 データを一切保存しない設計</h4>
+              <p>入力内容はメモリ上で一時処理後、即座に完全削除。履歴・ログは一切保存されません。</p>
             </div>
 
             <div>
-              <h4 className="font-semibold text-pink-800 mb-2">🔐 2. 通信の完全な暗号化とアクセス制限</h4>
-              <p>ユーザーとサーバー間の通信はすべて暗号化（HTTPS/TLS）されており、第三者によるデータの盗み見を防止します。また、システムへアクセスできる担当者を最小限に限定し、厳格な管理体制を敷いています。</p>
+              <h4 className="font-semibold text-pink-800 mb-2">🔐 通信の完全暗号化</h4>
+              <p>全通信をHTTPS/TLS暗号化し、セキュリティヘッダーによる多層防御を実装。個人情報の自動検出・ブロック機能付き。</p>
             </div>
 
             <div>
-              <h4 className="font-semibold text-pink-800 mb-2">🛡️ 3. セキュリティ強化機能</h4>
-              <ul className="list-disc list-inside space-y-1 ml-4">
-                <li>個人情報検出機能：氏名、電話番号、住所等の入力を自動検出・ブロック</li>
-                <li>Content Security Policy (CSP)：XSS攻撃からの保護</li>
-                <li>HTTPS Strict Transport Security (HSTS)：通信の完全暗号化強制</li>
-                <li>セキュアヘッダー：各種攻撃手法からの多層防御</li>
-              </ul>
+              <h4 className="font-semibold text-pink-800 mb-2">📊 匿名統計について</h4>
+              <p>応答時間等の匿名技術統計のみ収集。入力内容や個人情報は一切含まれません。</p>
             </div>
 
-            <div>
-              <h4 className="font-semibold text-pink-800 mb-2">📊 4. 匿名化された統計情報について</h4>
-              <p>サービス改善のため、応答時間やエラー発生率などの匿名化された技術統計のみを収集します。これらの統計にはユーザーの入力内容、個人情報、識別可能な情報は一切含まれません。</p>
-            </div>
-
-            <div>
-              <h4 className="font-semibold text-pink-800 mb-2">🚨 5. 緊急時のデータ保護</h4>
-              <p>万が一のシステム障害時でも、ユーザーデータは永続化されていないため、データ漏洩のリスクはありません。復旧作業においても、ユーザーの過去の入力履歴にアクセスできない設計となっています。</p>
-            </div>
-
-            <div className="bg-pink-25 border border-pink-200 rounded-md p-4">
-              <p className="text-xs text-pink-700">
-                <i className="fas fa-info-circle mr-2"></i>
-                <strong>最終更新：2025年10月7日</strong><br />
-                プライバシーポリシーに関するご質問やご不明な点がございましたら、サイト管理者までお問い合わせください。
-              </p>
+            <div className="bg-pink-50 border border-pink-200 rounded-md p-4 space-y-2">
+              <div>
+                <p className="text-xs text-pink-700 mb-3">
+                  <i className="fas fa-info-circle mr-2"></i>
+                  <strong>最終更新：2025年10月7日</strong>
+                </p>
+                
+                <div className="border-t border-pink-200 pt-3">
+                  <p className="text-xs text-pink-700 mb-2">
+                    <strong>お問い合わせ:</strong>
+                  </p>
+                  <p className="text-xs text-pink-600 font-mono">
+                    📧 kushiro[dot]ai[dot]lab[at]gmail[dot]com<br />
+                    👤 タップカルテ 担当 廣谷
+                  </p>
+                  <p className="text-xs text-pink-500 mt-2 italic">
+                    ※ スパム防止のため[dot]を「.」、[at]を「@」に置き換えてください
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
