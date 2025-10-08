@@ -966,7 +966,7 @@ app.get('/', (c) => {
               
               {/* Googleログインボタン */}
               <div id="auth-buttons">
-                <button id="login-btn" className="px-3 py-1 bg-blue-600 text-white rounded-md text-xs font-medium hover:bg-blue-700 transition-colors flex items-center space-x-1">
+                <button id="login-btn" className="px-3 py-1 bg-pink-200 text-pink-800 rounded-md text-xs font-medium hover:bg-pink-300 transition-colors flex items-center space-x-1">
                   <i className="fab fa-google"></i>
                   <span>ログイン</span>
                 </button>
@@ -998,9 +998,9 @@ app.get('/', (c) => {
               
               <button 
                 id="google-login-btn" 
-                className="w-full px-6 py-3 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-blue-400 transition-all flex items-center justify-center space-x-3 text-gray-700 font-medium shadow-sm"
+                className="w-full px-6 py-3 bg-pink-50 border-2 border-pink-200 rounded-lg hover:bg-pink-100 hover:border-pink-300 transition-all flex items-center justify-center space-x-3 text-pink-800 font-medium shadow-sm"
               >
-                <i className="fab fa-google text-xl text-blue-500"></i>
+                <i className="fab fa-google text-xl text-pink-600"></i>
                 <span>Googleでログイン</span>
               </button>
               

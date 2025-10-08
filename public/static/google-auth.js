@@ -61,6 +61,13 @@ class GoogleAuth {
     // Google API読み込み
     async loadGoogleAPI() {
         try {
+            // Google Client IDを先に取得
+            this.googleClientId = await this.getGoogleClientId();
+            
+            if (!this.googleClientId) {
+                throw new Error('Google Client IDが取得できませんでした');
+            }
+            
             // Google Identity Services API を動的に読み込み
             if (!window.google) {
                 const script = document.createElement('script');
@@ -70,20 +77,20 @@ class GoogleAuth {
                 document.head.appendChild(script);
                 
                 // スクリプト読み込み完了を待機
-                await new Promise((resolve) => {
+                await new Promise((resolve, reject) => {
                     script.onload = resolve;
+                    script.onerror = reject;
+                    // タイムアウト設定
+                    setTimeout(() => reject(new Error('Google APIの読み込みがタイムアウトしました')), 10000);
                 });
             }
             
-            // Google Client IDを設定（環境変数または設定から取得）
-            this.googleClientId = await this.getGoogleClientId();
+            // Google Sign-In初期化
+            this.initializeGoogleSignIn();
             
-            if (this.googleClientId) {
-                this.initializeGoogleSignIn();
-            }
         } catch (error) {
             console.error('Google API loading failed:', error);
-            this.showError('Google認証の初期化に失敗しました');
+            this.showError('Google認証の初期化に失敗しました: ' + error.message);
         }
     }
     
@@ -100,17 +107,31 @@ class GoogleAuth {
             console.error('Failed to get Google Client ID:', error);
         }
         
-        // フォールバック: 開発用固定値（本番では削除）
+        // 正しいGoogle Client ID（本番用 - tap-karte.com ドメイン用）
         return '388638501823-sv6e46462k3f7b57mfltv5r9o9dbh4el.apps.googleusercontent.com';
     }
     
     // Google Sign-In初期化
     initializeGoogleSignIn() {
-        if (window.google && this.googleClientId) {
-            google.accounts.id.initialize({
-                client_id: this.googleClientId,
-                callback: (response) => this.handleGoogleSignInResponse(response)
-            });
+        try {
+            if (window.google && this.googleClientId) {
+                console.log('Initializing Google Sign-In with client ID:', this.googleClientId);
+                
+                google.accounts.id.initialize({
+                    client_id: this.googleClientId,
+                    callback: (response) => this.handleGoogleSignInResponse(response),
+                    auto_select: false,
+                    cancel_on_tap_outside: false
+                });
+                
+                console.log('Google Sign-In initialized successfully');
+                
+            } else {
+                throw new Error('Google APIまたはClient IDが利用できません');
+            }
+        } catch (error) {
+            console.error('Google Sign-In initialization error:', error);
+            this.showError('Google認証の初期化に失敗しました: ' + error.message);
         }
     }
     
@@ -200,27 +221,67 @@ class GoogleAuth {
     // Googleログイン処理
     async handleGoogleLogin() {
         try {
-            if (!window.google || !this.googleClientId) {
-                throw new Error('Google認証が初期化されていません');
+            console.log('Google login button clicked');
+            console.log('Window.google available:', !!window.google);
+            console.log('Client ID:', this.googleClientId);
+            
+            if (!window.google) {
+                throw new Error('Google APIが読み込まれていません');
+            }
+            
+            if (!this.googleClientId) {
+                throw new Error('Google Client IDが設定されていません');
             }
             
             // Google One Tap 認証を表示
-            google.accounts.id.prompt();
-            
-            // または通常のサインイン
-            // google.accounts.id.renderButton(
-            //     this.googleLoginBtn,
-            //     { 
-            //         theme: "outline", 
-            //         size: "large",
-            //         width: 300,
-            //         locale: 'ja'
-            //     }
-            // );
+            google.accounts.id.prompt((notification) => {
+                console.log('Google prompt notification:', notification);
+                if (notification.isNotDisplayed()) {
+                    console.log('Google One Tap not displayed, reason:', notification.getNotDisplayedReason());
+                    // フォールバック: 通常のポップアップサインイン
+                    this.showGoogleSignInPopup();
+                }
+            });
             
         } catch (error) {
             console.error('Google login error:', error);
             this.showError('Googleログインに失敗しました: ' + error.message);
+        }
+    }
+    
+    // Google サインインポップアップ表示（フォールバック）
+    showGoogleSignInPopup() {
+        try {
+            // 一時的な要素を作成してGoogleボタンをレンダリング
+            const tempDiv = document.createElement('div');
+            tempDiv.style.position = 'fixed';
+            tempDiv.style.top = '50%';
+            tempDiv.style.left = '50%';
+            tempDiv.style.transform = 'translate(-50%, -50%)';
+            tempDiv.style.zIndex = '9999';
+            tempDiv.style.backgroundColor = 'white';
+            tempDiv.style.padding = '20px';
+            tempDiv.style.borderRadius = '8px';
+            tempDiv.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+            document.body.appendChild(tempDiv);
+            
+            google.accounts.id.renderButton(tempDiv, {
+                theme: "outline",
+                size: "large",
+                width: 300,
+                locale: 'ja'
+            });
+            
+            // 5秒後に削除
+            setTimeout(() => {
+                if (tempDiv.parentNode) {
+                    tempDiv.parentNode.removeChild(tempDiv);
+                }
+            }, 5000);
+            
+        } catch (error) {
+            console.error('Google popup signin error:', error);
+            this.showError('Googleサインインポップアップの表示に失敗しました');
         }
     }
     
