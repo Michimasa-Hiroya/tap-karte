@@ -1,0 +1,385 @@
+/**
+ * タップカルテ - ユーティリティ関数集
+ * 
+ * アプリケーション全体で使用する共通関数
+ */
+
+import type { LogLevel, LogEntry, NotificationType } from '../types'
+
+// ========================================
+// 🔐 セキュリティ関連ユーティリティ
+// ========================================
+
+/**
+ * 個人情報パターンをチェック
+ * @param text チェック対象のテキスト
+ * @param patterns 検出パターンの配列
+ * @returns 検出結果
+ */
+export const detectPersonalInfo = (
+  text: string, 
+  patterns: RegExp[]
+): boolean => {
+  return patterns.some(pattern => pattern.test(text))
+}
+
+/**
+ * テキストをサニタイズ
+ * @param text 入力テキスト
+ * @returns サニタイズされたテキスト
+ */
+export const sanitizeText = (text: string): string => {
+  return text
+    .trim()
+    .replace(/[<>]/g, '') // HTML タグ除去
+    .replace(/javascript:/gi, '') // JavaScript URL除去
+    .substring(0, 50000) // 最大長制限
+}
+
+/**
+ * 安全なJSONパース
+ * @param jsonString JSON文字列
+ * @param fallback パース失敗時のデフォルト値
+ * @returns パース結果
+ */
+export const safeJsonParse = <T>(
+  jsonString: string, 
+  fallback: T
+): T => {
+  try {
+    return JSON.parse(jsonString)
+  } catch {
+    return fallback
+  }
+}
+
+// ========================================
+// ⏱️ 時間・日付関連ユーティリティ
+// ========================================
+
+/**
+ * 現在のタイムスタンプを取得
+ * @param format フォーマット形式
+ * @returns フォーマットされた時刻文字列
+ */
+export const getCurrentTimestamp = (
+  format: 'iso' | 'unix' | 'readable' = 'iso'
+): string => {
+  const now = new Date()
+  
+  switch (format) {
+    case 'unix':
+      return Math.floor(now.getTime() / 1000).toString()
+    case 'readable':
+      return now.toLocaleString('ja-JP', { 
+        timeZone: 'Asia/Tokyo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      })
+    case 'iso':
+    default:
+      return now.toISOString()
+  }
+}
+
+/**
+ * 処理時間を計測
+ * @param operation 実行する処理
+ * @returns 実行結果と処理時間
+ */
+export const measurePerformance = async <T>(
+  operation: () => Promise<T>
+): Promise<{ result: T; duration: number }> => {
+  const startTime = performance.now()
+  const result = await operation()
+  const endTime = performance.now()
+  
+  return {
+    result,
+    duration: Math.round(endTime - startTime)
+  }
+}
+
+// ========================================
+// 📝 ログ・デバッグ関連ユーティリティ
+// ========================================
+
+/**
+ * 構造化ログ出力
+ * @param level ログレベル
+ * @param message メッセージ
+ * @param metadata 追加情報
+ */
+export const logger = {
+  debug: (message: string, metadata?: Record<string, any>) => 
+    log('debug', message, metadata),
+  
+  info: (message: string, metadata?: Record<string, any>) => 
+    log('info', message, metadata),
+  
+  warn: (message: string, metadata?: Record<string, any>) => 
+    log('warn', message, metadata),
+  
+  error: (message: string, metadata?: Record<string, any>) => 
+    log('error', message, metadata)
+}
+
+/**
+ * 内部ログ関数
+ */
+const log = (level: LogLevel, message: string, metadata?: Record<string, any>) => {
+  const entry: LogEntry = {
+    level,
+    message,
+    timestamp: getCurrentTimestamp(),
+    ...(metadata && { metadata })
+  }
+  
+  const prefix = `[${entry.timestamp}] [${level.toUpperCase()}]`
+  const formattedMessage = `${prefix} ${message}`
+  
+  switch (level) {
+    case 'debug':
+      console.debug(formattedMessage, metadata || '')
+      break
+    case 'info':
+      console.info(formattedMessage, metadata || '')
+      break
+    case 'warn':
+      console.warn(formattedMessage, metadata || '')
+      break
+    case 'error':
+      console.error(formattedMessage, metadata || '')
+      break
+  }
+}
+
+// ========================================
+// 🔤 文字列処理ユーティリティ
+// ========================================
+
+/**
+ * 文字数をカウント（日本語対応）
+ * @param text 対象テキスト
+ * @returns 文字数
+ */
+export const countCharacters = (text: string): number => {
+  return Array.from(text).length
+}
+
+/**
+ * テキストを指定文字数で切り詰め
+ * @param text 対象テキスト
+ * @param maxLength 最大文字数
+ * @param suffix 切り詰め時の接尾辞
+ * @returns 切り詰められたテキスト
+ */
+export const truncateText = (
+  text: string, 
+  maxLength: number, 
+  suffix = '...'
+): string => {
+  if (countCharacters(text) <= maxLength) {
+    return text
+  }
+  
+  const truncated = Array.from(text).slice(0, maxLength - suffix.length).join('')
+  return truncated + suffix
+}
+
+/**
+ * キャメルケースをケバブケースに変換
+ * @param str キャメルケース文字列
+ * @returns ケバブケース文字列
+ */
+export const camelToKebab = (str: string): string => {
+  return str.replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2').toLowerCase()
+}
+
+// ========================================
+// 🎲 ランダム・ID生成ユーティリティ
+// ========================================
+
+/**
+ * ランダムIDを生成
+ * @param prefix プレフィックス
+ * @param length ID長（デフォルト8文字）
+ * @returns 生成されたID
+ */
+export const generateId = (prefix = '', length = 8): string => {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
+  const randomChars = Array.from({ length }, () => 
+    chars.charAt(Math.floor(Math.random() * chars.length))
+  ).join('')
+  
+  return prefix ? `${prefix}_${randomChars}` : randomChars
+}
+
+/**
+ * UUIDv4を生成（簡易版）
+ * @returns UUID文字列
+ */
+export const generateUUID = (): string => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {
+    const random = Math.random() * 16 | 0
+    const value = char === 'x' ? random : (random & 0x3 | 0x8)
+    return value.toString(16)
+  })
+}
+
+// ========================================
+// 🔄 非同期処理ユーティリティ
+// ========================================
+
+/**
+ * 指定時間待機
+ * @param ms 待機時間（ミリ秒）
+ * @returns Promise
+ */
+export const sleep = (ms: number): Promise<void> => {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+/**
+ * リトライ付き非同期実行
+ * @param operation 実行する処理
+ * @param maxRetries 最大リトライ回数
+ * @param delay リトライ間隔（ミリ秒）
+ * @returns 実行結果
+ */
+export const withRetry = async <T>(
+  operation: () => Promise<T>,
+  maxRetries = 3,
+  delay = 1000
+): Promise<T> => {
+  let lastError: Error
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation()
+    } catch (error) {
+      lastError = error as Error
+      
+      if (attempt === maxRetries) {
+        throw lastError
+      }
+      
+      logger.warn(`Retry attempt ${attempt + 1}/${maxRetries}`, { 
+        error: lastError.message 
+      })
+      
+      await sleep(delay * Math.pow(2, attempt)) // 指数バックオフ
+    }
+  }
+  
+  throw lastError!
+}
+
+// ========================================
+// 💾 ローカルストレージユーティリティ
+// ========================================
+
+/**
+ * 安全なローカルストレージ操作
+ */
+export const storage = {
+  /**
+   * 値を保存
+   * @param key キー
+   * @param value 値
+   */
+  set: <T>(key: string, value: T): boolean => {
+    try {
+      const serializedValue = JSON.stringify(value)
+      localStorage.setItem(key, serializedValue)
+      return true
+    } catch (error) {
+      logger.error('Storage set failed', { key, error })
+      return false
+    }
+  },
+  
+  /**
+   * 値を取得
+   * @param key キー
+   * @param fallback デフォルト値
+   * @returns 取得された値
+   */
+  get: <T>(key: string, fallback: T): T => {
+    try {
+      const item = localStorage.getItem(key)
+      return item ? JSON.parse(item) : fallback
+    } catch (error) {
+      logger.error('Storage get failed', { key, error })
+      return fallback
+    }
+  },
+  
+  /**
+   * 値を削除
+   * @param key キー
+   */
+  remove: (key: string): boolean => {
+    try {
+      localStorage.removeItem(key)
+      return true
+    } catch (error) {
+      logger.error('Storage remove failed', { key, error })
+      return false
+    }
+  },
+  
+  /**
+   * 全て削除
+   */
+  clear: (): boolean => {
+    try {
+      localStorage.clear()
+      return true
+    } catch (error) {
+      logger.error('Storage clear failed', { error })
+      return false
+    }
+  }
+}
+
+// ========================================
+// 📱 ブラウザ・デバイス判定ユーティリティ
+// ========================================
+
+/**
+ * デバイス情報を取得
+ * @returns デバイス情報オブジェクト
+ */
+export const getDeviceInfo = () => {
+  const userAgent = navigator.userAgent
+  
+  return {
+    isMobile: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent),
+    isTablet: /iPad|Android(?=.*Mobile)|Silk/i.test(userAgent),
+    isDesktop: !/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent),
+    isIOS: /iPhone|iPad|iPod/i.test(userAgent),
+    isAndroid: /Android/i.test(userAgent),
+    isWebView: /wv|WebView/i.test(userAgent),
+    isInAppBrowser: /FBAV|FBAN|Instagram|Twitter|Line|WeChat/i.test(userAgent)
+  }
+}
+
+/**
+ * ブラウザがローカルストレージをサポートしているかチェック
+ * @returns サポート状況
+ */
+export const isLocalStorageSupported = (): boolean => {
+  try {
+    const testKey = '__localStorage_test__'
+    localStorage.setItem(testKey, 'test')
+    localStorage.removeItem(testKey)
+    return true
+  } catch {
+    return false
+  }
+}

@@ -550,7 +550,9 @@ const FooterComponent = () => (
  */
 const ScriptComponents = () => (
   <>
-    <script src="/static/app-refactored.js"></script>
+    <script src="/static/AuthService.js"></script>
+    <script src="/static/AuthComponent.js"></script>
+    <script src="/static/app.js"></script>
   </>
 )
 
