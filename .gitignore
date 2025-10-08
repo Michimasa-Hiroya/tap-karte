@@ -31,3 +31,72 @@ lerna-debug.log*
 
 # misc
 .DS_Store
+
+# ========================================
+# 🛡️ セキュリティ関連ファイル
+# ========================================
+
+# 環境変数・設定ファイル
+*.env*
+.dev.vars*
+.secrets
+.local
+wrangler.toml.local
+config.local.*
+
+# APIキー・認証情報
+*secret*
+*key*
+*token*
+*password*
+*.pem
+*.p12
+*.pfx
+*.crt
+*.cer
+*.der
+
+# データベース・ログ
+*.db
+*.sqlite
+*.sqlite3
+audit-results.json
+security-report.*
+
+# バックアップ・一時ファイル
+*.bak
+*.backup
+*.tmp
+*.temp
+*~
+.#*
+#*#
+
+# IDEセキュリティ設定
+.vscode/settings.json
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# OS固有ファイル
+Thumbs.db
+.Spotlight-V100
+.Trashes
+*.swp
+*.swo
+
+# 圧縮ファイル
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# ========================================
+# 🔒 GensparkAIドライブ関連（完全除外）
+# ========================================
+/mnt/aidrive/
+*.aidrive
+.gensparkdata
+genSpark_temp.*

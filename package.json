@@ -16,7 +16,12 @@
     "db:migrate:prod": "wrangler d1 migrations apply nursing-assistant-production",
     "db:console:local": "wrangler d1 execute nursing-assistant-production --local",
     "db:console:prod": "wrangler d1 execute nursing-assistant-production",
-    "db:seed": "wrangler d1 execute nursing-assistant-production --local --command=\"SELECT 'Database connected successfully' as status\""
+    "db:seed": "wrangler d1 execute nursing-assistant-production --local --command=\"SELECT 'Database connected successfully' as status\"",
+    "security:check": "node scripts/security-check.cjs",
+    "security:audit": "npm audit --audit-level moderate",
+    "security:fix": "npm audit fix",
+    "security:scan": "npm run security:check && npm run security:audit",
+    "security:report": "npm run security:scan > security-report.txt 2>&1 || true"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.3",
