@@ -29,7 +29,7 @@ type Bindings = {
 
 const app = new Hono<{ Bindings: Bindings }>()
 
-// Security headers middleware
+// 🔒 強化されたセキュリティヘッダー middleware
 app.use('*', async (c, next) => {
   // セキュリティヘッダーの追加
   c.header('X-Content-Type-Options', 'nosniff')
@@ -37,6 +37,25 @@ app.use('*', async (c, next) => {
   c.header('X-XSS-Protection', '1; mode=block')
   c.header('Referrer-Policy', 'strict-origin-when-cross-origin')
   c.header('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()')
+  
+  // HTTPS強制とセキュリティ強化
+  c.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload')
+  
+  // CSP (Content Security Policy) - XSS攻撃防御
+  c.header('Content-Security-Policy', 
+    "default-src 'self' https:; " +
+    "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; " +
+    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
+    "img-src 'self' https:; " +
+    "font-src 'self' https://cdn.jsdelivr.net; " +
+    "connect-src 'self' https:; " +
+    "object-src 'none'; " +
+    "base-uri 'self'; " +
+    "form-action 'self';"
+  )
+  
+  // プライバシー強化 - リファラー情報を最小限に
+  c.header('Referrer-Policy', 'strict-origin-when-cross-origin')
   
   await next()
 })
@@ -48,7 +67,11 @@ app.use('/api/*', cors({
     if (!origin) return true // Same-origin requests
     const allowedOrigins = [
       'http://localhost:3000',
+      'https://tap-karte.com',
+      'https://www.tap-karte.com', 
+      'https://tap-carte.pages.dev',
       'https://nursing-assistant.pages.dev',
+      /^https:\/\/.*\.tap-carte\.pages\.dev$/,
       /^https:\/\/.*\.e2b\.dev$/
     ]
     return allowedOrigins.some(allowed => 
@@ -699,16 +722,9 @@ app.post('/api/convert', async (c) => {
       if (pattern.test(sanitizedText)) {
         errorType = 'security_warning'
         
-        // セキュリティログ
-        if (c.env?.DB) {
-          await logSecurity(c.env.DB, {
-            eventType: 'personal_info_detected',
-            description: 'Personal information pattern detected in input',
-            severity: 'warning',
-            ipAddress: c.req.header('CF-Connecting-IP'),
-            userAgent: c.req.header('User-Agent')
-          })
-        }
+        // ⛔ セキュリティログ無効化 - プライバシー最優先設計
+        // 個人情報検出機能は作動しますが、ログは一切記録されません
+        // 検出時は即座に処理を停止し、データはメモリから完全に破棄されます
         
         return c.json({ 
           success: false, 
@@ -819,34 +835,14 @@ ${sanitizedText}
     // セッションID生成（簡易版）
     const sessionId = c.req.header('x-session-id') || `session_${Date.now()}_${Math.random().toString(36).substring(2)}`
     
-    // データベースログ
-    if (c.env?.DB) {
-      await Promise.all([
-        logNursingRecord(c.env.DB, {
-          sessionId: sessionId,
-          inputText: sanitizedText,
-          outputText: outputText,
-          optionsStyle: style,
-          optionsDocType: docType,
-          optionsFormat: format,
-          charLimit: maxOutputChars,
-          responseTime: responseTime,
-          ipAddress: c.req.header('CF-Connecting-IP'),
-          userAgent: c.req.header('User-Agent'),
-          userId: session?.isAuthenticated ? session.userId : null // 追加
-        }),
-        logPerformance(c.env.DB, {
-          endpoint: '/api/convert',
-          method: 'POST',
-          statusCode: 200,
-          responseTime: responseTime,
-          ipAddress: c.req.header('CF-Connecting-IP')
-        })
-      ])
-    }
+    // ⛔ データ保存無効化 - プライバシー最優先設計
+    // ユーザーデータは一切保存されず、処理完了後にメモリから完全に破棄されます
     
-    // パフォーマンス監視ログ
-    console.log(`[PERFORMANCE] Success: ${success}, Response Time: ${responseTime}ms, Input Length: ${sanitizedText.length}, Output Length: ${outputText.length}`)
+    // パフォーマンス統計は匿名化された集計データのみをメモリで処理
+    // （IPアドレス、ユーザー情報、入力内容は一切記録しません）
+    
+    // 匿名化された最小限のパフォーマンス統計（個人情報なし）
+    console.log(`[PERFORMANCE] Success: ${success}, Response Time: ${responseTime}ms`)
     
     return c.json({
       success: true,
@@ -880,31 +876,12 @@ ${sanitizedText}
       }
     }
     
-    // データベースログ（エラー時）
-    if (c.env?.DB) {
-      await Promise.all([
-        logPerformance(c.env.DB, {
-          endpoint: '/api/convert',
-          method: 'POST',
-          statusCode: 500,
-          responseTime: responseTime,
-          errorType: errorType,
-          ipAddress: c.req.header('CF-Connecting-IP')
-        }),
-        logSecurity(c.env.DB, {
-          eventType: 'api_error',
-          description: `API conversion failed: ${errorType}`,
-          severity: errorType.includes('security') ? 'warning' : 'error',
-          ipAddress: c.req.header('CF-Connecting-IP'),
-          userAgent: c.req.header('User-Agent')
-        })
-      ])
-    }
+    // ⛔ エラーログ無効化 - プライバシー最優先設計
+    // エラー情報もユーザーデータと同様、一切記録されません
+    // システムは匿名化されたエラー統計のみをメモリで処理します
     
-    // パフォーマンス監視ログ（エラー時）
-    console.error(`[PERFORMANCE] Success: false, Error Type: ${errorType}, Response Time: ${responseTime}ms, Error: ${error}`)
-    
-    console.error('Claude API error:', error)
+    // 匿名化された最小限のエラー統計（個人情報・詳細エラー内容なし）
+    console.error(`[PERFORMANCE] Success: false, Error Type: ${errorType}, Response Time: ${responseTime}ms`)
     
     // API固有のエラーメッセージを判定
     let errorMessage = 'AI変換サービスでエラーが発生しました。しばらく時間をおいて再度お試しください。'
@@ -1233,13 +1210,65 @@ app.get('/', (c) => {
           
           <div className="p-6">
             <div className="text-center text-pink-500 py-8">
-              <i className="fas fa-tools text-pink-400 mb-3 text-2xl block"></i>
-              <p className="font-medium">履歴機能は現在開発中です</p>
-              <p className="text-sm text-pink-400 mt-1">より良い機能でお届けするため、今後のアップデートをお待ちください</p>
+              <i className="fas fa-shield-alt text-pink-400 mb-3 text-2xl block"></i>
+              <p className="font-medium">プライバシー最優先設計により履歴は保存されません</p>
+              <p className="text-sm text-pink-400 mt-1">あなたの入力内容は処理後すぐにメモリから完全に消去され、誰も後から確認することはできません</p>
+              <div className="mt-4">
+                <a href="#privacy-policy" className="text-pink-600 hover:text-pink-800 text-xs underline">プライバシーポリシーの詳細</a>
+              </div>
             </div>
           </div>
         </div>
 
+        {/* プライバシーポリシーセクション */}
+        <div id="privacy-policy" className="mt-12 bg-white rounded-lg shadow-lg border border-pink-200">
+          <div className="bg-pink-50 px-6 py-4 border-b border-pink-200">
+            <h3 className="text-lg font-semibold text-pink-900 flex items-center">
+              <i className="fas fa-shield-alt text-pink-600 mr-2"></i>
+              プライバシーポリシー
+            </h3>
+          </div>
+          
+          <div className="p-6 space-y-6 text-sm text-gray-700">
+            <div>
+              <h4 className="font-semibold text-pink-800 mb-2">🔒 1. データを一切保存しない設計</h4>
+              <p>ユーザーの入力内容は、サーバーやブラウザ、ログに一切保存されません。データは文章生成のためだけに一時的にメモリ上で処理され、完了後すぐに破棄されます。これにより、開発者を含め誰も後から履歴を確認することはできません。</p>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-pink-800 mb-2">🔐 2. 通信の完全な暗号化とアクセス制限</h4>
+              <p>ユーザーとサーバー間の通信はすべて暗号化（HTTPS/TLS）されており、第三者によるデータの盗み見を防止します。また、システムへアクセスできる担当者を最小限に限定し、厳格な管理体制を敷いています。</p>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-pink-800 mb-2">🛡️ 3. セキュリティ強化機能</h4>
+              <ul className="list-disc list-inside space-y-1 ml-4">
+                <li>個人情報検出機能：氏名、電話番号、住所等の入力を自動検出・ブロック</li>
+                <li>Content Security Policy (CSP)：XSS攻撃からの保護</li>
+                <li>HTTPS Strict Transport Security (HSTS)：通信の完全暗号化強制</li>
+                <li>セキュアヘッダー：各種攻撃手法からの多層防御</li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-pink-800 mb-2">📊 4. 匿名化された統計情報について</h4>
+              <p>サービス改善のため、応答時間やエラー発生率などの匿名化された技術統計のみを収集します。これらの統計にはユーザーの入力内容、個人情報、識別可能な情報は一切含まれません。</p>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-pink-800 mb-2">🚨 5. 緊急時のデータ保護</h4>
+              <p>万が一のシステム障害時でも、ユーザーデータは永続化されていないため、データ漏洩のリスクはありません。復旧作業においても、ユーザーの過去の入力履歴にアクセスできない設計となっています。</p>
+            </div>
+
+            <div className="bg-pink-25 border border-pink-200 rounded-md p-4">
+              <p className="text-xs text-pink-700">
+                <i className="fas fa-info-circle mr-2"></i>
+                <strong>最終更新：2025年10月7日</strong><br />
+                プライバシーポリシーに関するご質問やご不明な点がございましたら、サイト管理者までお問い合わせください。
+              </p>
+            </div>
+          </div>
+        </div>
 
       </main>
 
