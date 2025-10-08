@@ -7,7 +7,7 @@
 import { Hono } from 'hono'
 import type { CloudflareBindings, AuthResponse, User, ApiResponse } from '../types'
 import { SECURITY_CONFIG, getEnvironmentVariables } from '../config'
-import { logger, getCurrentTimestamp, generateId } from '../utils'
+import { logger, getCurrentTimestamp, generateId, generateDemoUser, generateDemoAuthToken, validateDemoAuthToken } from '../utils'
 
 // ========================================
 // 🔑 認証APIルート
@@ -239,92 +239,9 @@ auth.get('/google-config', async (c) => {
 // 🔧 ヘルパー関数
 // ========================================
 
-/**
- * デモユーザー情報を生成
- */
-function generateDemoUser(): User {
-  const userNames = [
-    'デモユーザー',
-    'テスト看護師',
-    'サンプル利用者',
-    'タップカルテユーザー'
-  ]
-  
-  const userName = userNames[Math.floor(Math.random() * userNames.length)]
-  const userId = generateId('demo_user', 6)
-  const userEmail = `${userId}@tapcarte.demo`
-  
-  return {
-    id: userId,
-    name: userName,
-    email: userEmail,
-    picture: `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=f472b6&color=fff&size=128`
-  }
-}
-
-/**
- * デモ認証トークンを生成
- * 注意: これはデモ用の簡易実装です。本番環境では適切なJWT実装を使用してください。
- */
-function generateDemoAuthToken(user: User): string {
-  const payload = {
-    sub: user.id,
-    name: user.name,
-    email: user.email,
-    picture: user.picture,
-    iat: Math.floor(Date.now() / 1000),
-    exp: Math.floor(Date.now() / 1000) + SECURITY_CONFIG.jwtExpirationTime,
-    demo: true // デモトークンであることを示すフラグ
-  }
-  
-  // デモ用の簡易トークン（Base64エンコード）
-  // 本番環境では適切なJWT署名を実装してください
-  const tokenData = {
-    header: { alg: 'DEMO', typ: 'JWT' },
-    payload: payload,
-    signature: 'demo_signature'
-  }
-  
-  return `demo.${btoa(JSON.stringify(tokenData))}.demo`
-}
-
-/**
- * デモ認証トークンを検証
- */
-function validateDemoAuthToken(token: string): User | null {
-  try {
-    if (!token.startsWith('demo.') || !token.endsWith('.demo')) {
-      return null
-    }
-    
-    // デモトークンの内容を抽出
-    const tokenPart = token.slice(5, -5) // 'demo.' と '.demo' を除去
-    const tokenData = JSON.parse(atob(tokenPart))
-    
-    if (!tokenData.payload || !tokenData.payload.demo) {
-      return null
-    }
-    
-    const payload = tokenData.payload
-    
-    // 有効期限チェック
-    const currentTime = Math.floor(Date.now() / 1000)
-    if (payload.exp && payload.exp < currentTime) {
-      return null
-    }
-    
-    // ユーザー情報を返す
-    return {
-      id: payload.sub,
-      name: payload.name,
-      email: payload.email,
-      picture: payload.picture
-    }
-    
-  } catch (error) {
-    logger.warn('Demo token validation failed', { error })
-    return null
-  }
-}
+// 認証関数はutils/index.tsからインポートされています:
+// - generateDemoUser()
+// - generateDemoAuthToken()  
+// - validateDemoAuthToken()
 
 export { auth }

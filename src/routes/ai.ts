@@ -11,7 +11,7 @@ import { AI_CONFIG, getEnvironmentVariables, validateEnvironmentVariables } from
 import { logger, measurePerformance, sanitizeText, getCurrentTimestamp } from '../utils'
 
 // 医療用語辞書のインポート
-import { medicalTerms } from '../medical-dictionary.js'
+import { medicalTerms } from '../medical-dictionary'
 
 // ========================================
 // 🤖 AI変換APIルート
@@ -41,17 +41,20 @@ ai.post('/convert', async (c) => {
       }, 500)
     }
 
-    // バリデーション済みボディの取得
-    const validatedBody = c.get('validatedBody')
-    if (!validatedBody) {
+    // リクエストボディの取得
+    let requestBody
+    try {
+      requestBody = await c.req.json()
+    } catch (error) {
+      logger.warn('Invalid JSON in request body', { requestId })
       return c.json<ApiResponse<ConversionResponse>>({
         success: false,
-        error: '入力データが無効です'
+        error: '無効なJSONデータです'
       }, 400)
     }
 
     // リクエストデータの検証・抽出
-    const conversionRequest = extractConversionRequest(validatedBody)
+    const conversionRequest = extractConversionRequest(requestBody)
     if (!conversionRequest.success) {
       logger.warn('Invalid conversion request', {
         requestId,
@@ -149,7 +152,8 @@ function extractConversionRequest(body: any): {
   data?: ConversionRequest
   error?: string
 } {
-  const { text, style, docType, format, charLimit } = body
+  // 新しいAPIフォーマット { text, options } をサポート
+  const { text, options, style, docType, format, charLimit } = body
 
   // 必須フィールドの検証
   if (!text || typeof text !== 'string') {
@@ -159,6 +163,27 @@ function extractConversionRequest(body: any): {
     }
   }
 
+  // 新しい形式 { text, options } の場合
+  if (options && typeof options === 'object') {
+    const { format: optFormat, style: optStyle, include_suggestions } = options
+    
+    return {
+      success: true,
+      data: {
+        text: sanitizeText(text),
+        options: {
+          format: optFormat || 'medical_record',
+          style: optStyle || 'professional',
+          include_suggestions: include_suggestions !== false,
+          // 従来フォーマットへのマッピング
+          docType: optFormat === 'report' ? '報告書' : '記録',
+          charLimit: AI_CONFIG.defaultCharLimit
+        }
+      }
+    }
+  }
+
+  // 従来の形式をサポート（後方互換性）
   if (!style || !docType || !format) {
     return {
       success: false,

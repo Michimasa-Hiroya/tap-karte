@@ -383,3 +383,98 @@ export const isLocalStorageSupported = (): boolean => {
     return false
   }
 }
+
+// ========================================
+// 🔐 認証ユーティリティ
+// ========================================
+
+import type { User } from '../types'
+
+/**
+ * デモユーザーを生成
+ * @returns デモユーザー情報
+ */
+export const generateDemoUser = (): User => {
+  const demoUsers = [
+    {
+      name: '田中 花子',
+      email: 'demo.nurse01@example.com',
+      picture: 'https://page.gensparksite.com/v1/base64_upload/e0e0839ca795c5577a86e6b90d5285a3'
+    },
+    {
+      name: '佐藤 美咲',
+      email: 'demo.nurse02@example.com', 
+      picture: 'https://page.gensparksite.com/v1/base64_upload/e0e0839ca795c5577a86e6b90d5285a3'
+    },
+    {
+      name: '高橋 由美',
+      email: 'demo.nurse03@example.com',
+      picture: 'https://page.gensparksite.com/v1/base64_upload/e0e0839ca795c5577a86e6b90d5285a3'
+    }
+  ]
+  
+  const randomUser = demoUsers[Math.floor(Math.random() * demoUsers.length)]
+  
+  return {
+    id: generateId(),
+    name: randomUser.name,
+    email: randomUser.email,
+    picture: randomUser.picture
+  }
+}
+
+/**
+ * デモ認証トークンを生成
+ * @param user ユーザー情報
+ * @returns 認証トークン
+ */
+export const generateDemoAuthToken = (user: User): string => {
+  // デモ用のシンプルなトークン生成 - JSON形式
+  const payload = {
+    userId: user.id,
+    name: user.name,
+    email: user.email,
+    picture: user.picture,
+    iat: Math.floor(Date.now() / 1000),
+    exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24時間後に期限切れ
+  }
+  
+  // JSONを直接エンコード（シンプル・確実）
+  return 'demo_token_' + encodeURIComponent(JSON.stringify(payload))
+}
+
+/**
+ * デモ認証トークンを検証
+ * @param token 認証トークン
+ * @returns ユーザー情報（無効な場合はnull）
+ */
+export const validateDemoAuthToken = (token: string): User | null => {
+  try {
+    if (!token.startsWith('demo_token_')) {
+      return null
+    }
+    
+    const payloadJson = token.substring(11) // 'demo_token_'を除去
+    const payload = JSON.parse(decodeURIComponent(payloadJson))
+    
+    // 有効期限チェック
+    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+      logger.warn('Demo token expired', { userId: payload.userId })
+      return null
+    }
+    
+    return {
+      id: payload.userId,
+      name: payload.name,
+      email: payload.email,
+      picture: payload.picture
+    }
+  } catch (error) {
+    logger.error('Demo token validation failed', { 
+      error: (error as Error).message,
+      token: token.substring(0, 20) + '...'
+    })
+    return null
+  }
+}
+
