@@ -9,7 +9,7 @@ export const renderer = jsxRenderer(({ children }) => {
         <title>タップカルテ - 思ったことを、そのままカルテに</title>
         
         {/* 🔒 セキュリティ強化メタタグ */}
-        <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://accounts.google.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' https: data:; font-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https: https://accounts.google.com; frame-src https://accounts.google.com; object-src 'none'; base-uri 'self'; form-action 'self';" />
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' https: data:; font-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self';" />
         <meta http-equiv="X-Content-Type-Options" content="nosniff" />
         <meta http-equiv="X-Frame-Options" content="DENY" />
         <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
@@ -30,9 +30,6 @@ export const renderer = jsxRenderer(({ children }) => {
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="タップカルテ" />
-        
-        {/* Google Identity Services API - 事前読み込み */}
-        <script src="https://accounts.google.com/gsi/client" async defer></script>
       </head>
       <body class="bg-gray-50 font-sans">{children}</body>
     </html>

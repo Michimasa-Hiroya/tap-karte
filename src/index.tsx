@@ -1102,7 +1102,7 @@ app.get('/', (c) => {
         </div>
       </header>
       
-      {/* Google認証モーダル */}
+      {/* シンプルなデモ認証モーダル */}
       <div id="auth-modal" className="hidden fixed inset-0 bg-black bg-opacity-50 z-50">
         <div className="flex items-center justify-center min-h-screen p-4">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
@@ -1115,45 +1115,25 @@ app.get('/', (c) => {
             
             <div className="text-center mb-6">
               <div className="mb-4">
-                <i className="fab fa-google text-4xl text-blue-500 mb-3 block"></i>
-                <h3 className="text-lg font-semibold text-gray-700 mb-2">Googleアカウントでログイン</h3>
-                <p className="text-sm text-gray-500">安全で簡単なGoogleアカウント認証</p>
+                <i className="fas fa-user-circle text-4xl text-pink-500 mb-3 block"></i>
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">デモ環境でログイン</h3>
+                <p className="text-sm text-gray-500">すぐに全機能をお試しいただけます</p>
               </div>
               
-              <div id="auth-error" className="hidden text-red-600 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded-md"></div>
-              
               <button 
-                id="google-login-btn" 
-                className="w-full px-6 py-3 bg-pink-50 border-2 border-pink-200 rounded-lg hover:bg-pink-100 hover:border-pink-300 transition-all flex items-center justify-center space-x-3 text-pink-800 font-medium shadow-sm"
+                id="demo-login-btn" 
+                className="w-full px-6 py-3 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-all flex items-center justify-center space-x-3 font-medium shadow-sm"
               >
-                <i className="fab fa-google text-xl text-pink-600"></i>
-                <span>Googleでログイン</span>
-              </button>
-              
-              <button 
-                id="force-real-auth-btn" 
-                className="w-full mt-3 px-4 py-2 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-all text-green-800 text-sm font-medium"
-              >
-                🚀 本番Google認証を強制実行
-              </button>
-              
-              <button 
-                id="mobile-demo-auth-btn" 
-                className="w-full mt-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-all text-blue-800 text-sm font-medium"
-              >
-                📱 モバイル専用デモ認証
+                <i className="fas fa-play-circle text-xl"></i>
+                <span>デモログインで開始</span>
               </button>
               
               <div className="mt-4 text-xs text-gray-500">
-                <div className="mb-2 p-2 bg-orange-50 border border-orange-200 rounded text-orange-700">
-                  <p className="font-semibold mb-1">📱 モバイル環境について</p>
-                  <p>モバイルブラウザではGoogleのセキュリティ制限により、OAuth認証に制限があります。「モバイル専用デモ認証」をお試しください。</p>
+                <div className="p-3 bg-pink-50 border border-pink-200 rounded text-pink-700">
+                  <p className="font-semibold mb-1">🎯 デモ環境について</p>
+                  <p>すべての機能を制限なく体験できます。ログイン状態はブラウザに保存され、継続してご利用いただけます。</p>
                 </div>
-                <div className="mb-2 p-2 bg-blue-50 border border-blue-200 rounded text-blue-700">
-                  <p className="font-semibold mb-1">🧪 テスト環境</p>
-                  <p>現在はデモ用ログインが動作します。本格運用には Google OAuth の設定が必要です。</p>
-                </div>
-                <p>ログインすることで、<a href="#privacy-policy" className="text-pink-600 hover:text-pink-800 underline">プライバシーポリシー</a>に同意したものとみなされます。</p>
+                <p className="mt-2">ログインすることで、<a href="#privacy-policy" className="text-pink-600 hover:text-pink-800 underline">プライバシーポリシー</a>に同意したものとみなされます。</p>
               </div>
             </div>
           </div>
@@ -1365,7 +1345,7 @@ app.get('/', (c) => {
 
       </main>
 
-      <script src="/static/google-auth.js"></script>
+      <script src="/static/simple-demo-auth.js"></script>
       <script src="/static/app.js"></script>
     </div>
   )
