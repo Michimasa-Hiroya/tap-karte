@@ -771,7 +771,7 @@ app.post('/api/convert', async (c) => {
       : ''
 
     const prompt = `## 役割と目的
-あなたは経験豊富な看護師・理学療法士・作業療法士で、非公式な観察メモを医療記録基準に適合した看護記録に変換する専門家です。
+あなたは経験豊富な看護師・理学療法士・作業療法士で、非公式な観察メモを適切な看護記録に変換する専門家です。
 
 ## 変換要件
 
@@ -812,7 +812,7 @@ ${style === 'だ・である体' ? `**だ・である調の表現例**
 ## 変換対象の観察メモ
 ${sanitizedText}
 
-## 看護記録（上記要件に従って変換）`
+## 看護記録`
     
     const result = await model.generateContent(prompt)
     
@@ -1195,16 +1195,7 @@ app.get('/', (c) => {
             <li>生成ボタンをタップして、整った看護記録や報告書が自動生成</li>
             <li>「コピー」ボタンで電子カルテにそのまま貼り付け可能</li>
           </ol>
-          <div className="mt-4 p-3 bg-white border border-pink-200 rounded-md">
-            <div className="flex items-center space-x-2 mb-2">
-              <i className="fas fa-shield-alt text-pink-600"></i>
-              <span className="font-semibold text-pink-800 text-sm">プライバシー保護</span>
-            </div>
-            <p className="text-xs text-pink-600">
-              入力内容は処理後即座に削除され、履歴は一切保存されません。
-              <a href="#privacy-policy" className="text-pink-700 hover:text-pink-900 underline ml-1">詳細はプライバシーポリシーをご覧ください</a>
-            </p>
-          </div>
+
         </div>
 
 
