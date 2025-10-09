@@ -414,16 +414,6 @@ const InputAreaComponent = () => (
     </div>
     
     {/* 使用制限・認証メッセージ（入力欄と生成ボタンの間に配置） */}
-    {/* 認証必須メッセージ */}
-    <div id="auth-required-message" className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-      <div className="flex items-center space-x-2">
-        <i className="fas fa-lock text-yellow-600"></i>
-        <span className="text-sm font-semibold text-yellow-700">ログインが必要です</span>
-      </div>
-      <p className="text-sm text-yellow-600 mt-1">
-        生成機能をご利用いただくには、ログインが必要です。右上の「ログイン」ボタンからログインしてください。
-      </p>
-    </div>
     
     {/* 使用制限メッセージ - Safari対応版 */}
     <div id="usage-limit-message" className="mb-4 p-4 bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-lg shadow-sm" style={{display: 'none'}}>
