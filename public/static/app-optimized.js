@@ -1582,7 +1582,7 @@ class AppService {
   }
 
   /**
-   * ボタン選択（完全維持）
+   * ボタン選択（報告書選択時のSOAP形式無効化対応）
    */
   selectButton(groupIds, selectedId) {
     groupIds.forEach(id => {
@@ -1598,7 +1598,52 @@ class AppService {
       }
     })
     
+    // 報告書選択時にSOAP形式を無効化する処理
+    if (selectedId === 'doc-report') {
+      this.handleReportSelection()
+    } else if (selectedId === 'doc-record') {
+      this.handleRecordSelection()
+    }
+    
     console.log(`[AppService] Button selected: ${selectedId}`)
+  }
+
+  /**
+   * 報告書選択時の処理
+   */
+  handleReportSelection() {
+    const soapBtn = DOM.get('format-soap')
+    const textBtn = DOM.get('format-text')
+    
+    if (soapBtn && textBtn) {
+      // SOAP形式ボタンを無効化
+      soapBtn.disabled = true
+      soapBtn.classList.add('opacity-50', 'cursor-not-allowed')
+      soapBtn.classList.remove('hover:bg-pink-200')
+      
+      // 現在SOAP形式が選択されている場合は文章形式に切り替え
+      if (soapBtn.classList.contains('bg-pink-600')) {
+        this.selectButton(['format-text', 'format-soap'], 'format-text')
+      }
+      
+      console.log('[AppService] Report selected: SOAP format disabled')
+    }
+  }
+
+  /**
+   * 記録選択時の処理
+   */
+  handleRecordSelection() {
+    const soapBtn = DOM.get('format-soap')
+    
+    if (soapBtn) {
+      // SOAP形式ボタンを有効化
+      soapBtn.disabled = false
+      soapBtn.classList.remove('opacity-50', 'cursor-not-allowed')
+      soapBtn.classList.add('hover:bg-pink-200')
+      
+      console.log('[AppService] Record selected: SOAP format enabled')
+    }
   }
 
   /**
