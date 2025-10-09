@@ -1353,8 +1353,22 @@ class AppService {
       
       if (usageMessage) {
         if (canGenerate) {
-          usageMessage.style.display = "none"
+          // 利用可能な場合：利用制限の説明を表示
+          usageMessage.style.display = "block"
+          usageMessage.innerHTML = `
+            <div class="text-center">
+              <p class="text-sm text-blue-600 mb-2">
+                <i class="fas fa-info-circle mr-1"></i>
+                <strong>利用制限:</strong> 新規ユーザーは1日1回まで無料利用可能
+              </p>
+              <p class="text-sm text-orange-600 font-medium">
+                <i class="fas fa-key mr-1"></i>
+                ログインすると<strong>無制限</strong>でご利用いただけます
+              </p>
+            </div>
+          `
         } else {
+          // 利用制限に達した場合：制限メッセージを表示
           usageMessage.style.display = "block"
           usageMessage.innerHTML = `
             <div class="flex items-center justify-center space-x-3 mb-3">
