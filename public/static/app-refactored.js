@@ -45,34 +45,40 @@ class AuthService {
   // ========================================
 
   /**
-   * デモログイン処理
+   * パスワード認証ログイン処理
+   * @param {string} password - パスワード
    * @returns {Promise<boolean>} ログイン成功フラグ
    */
-  async login() {
+  async login(password) {
     try {
-      console.log('[AuthService] Starting demo login...')
+      console.log('[AuthService] Starting password login...')
       
-      const response = await fetch(`${this.config.apiBaseUrl}/auth/demo-login`, {
+      if (!password) {
+        throw new Error('パスワードが入力されていません')
+      }
+      
+      const response = await fetch(`${this.config.apiBaseUrl}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({ password })
       })
-      
-      if (!response.ok) {
-        throw new Error(`ログインに失敗しました: ${response.status}`)
-      }
       
       const data = await response.json()
       
-      if (data.success && data.user && data.token) {
+      if (!response.ok) {
+        throw new Error(data.error || `ログインに失敗しました: ${response.status}`)
+      }
+      
+      if (data.success && data.data && data.data.user && data.data.token) {
         // 認証情報を保存
-        this.currentUser = data.user
-        this.authToken = data.token
+        this.currentUser = data.data.user
+        this.authToken = data.data.token
         
         // ローカルストレージに保存
-        localStorage.setItem(this.config.tokenStorageKey, data.token)
-        localStorage.setItem(this.config.userStorageKey, JSON.stringify(data.user))
+        localStorage.setItem(this.config.tokenStorageKey, data.data.token)
+        localStorage.setItem(this.config.userStorageKey, JSON.stringify(data.data.user))
         
         // セッション監視を開始
         this.startSessionMonitoring()
@@ -80,15 +86,23 @@ class AuthService {
         // リスナーに通知
         this.notifyAuthListeners(true)
         
-        console.log('[AuthService] Login successful:', data.user.name)
+        console.log('[AuthService] Login successful:', data.data.user.name)
         return true
       } else {
-        throw new Error(data.message || 'ログインレスポンスが無効です')
+        throw new Error(data.error || 'ログインレスポンスが無効です')
       }
     } catch (error) {
       console.error('[AuthService] Login error:', error)
       throw error
     }
+  }
+
+  /**
+   * レガシーデモログイン（後方互換性のため）
+   * @deprecated パスワード認証を使用してください
+   */
+  async demoLogin() {
+    throw new Error('デモログインは無効化されました。パスワードを入力してログインしてください。')
   }
 
   /**
@@ -361,28 +375,34 @@ class AuthComponent {
   cacheDOMElements() {
     this.elements = {
       // 認証モーダル
-      authModal: document.getElementById('authModal'),
+      authModal: document.getElementById('auth-modal'),
       
       // ログインボタン
-      loginBtn: document.getElementById('loginBtn'),
-      demoLoginBtn: document.getElementById('demoLoginBtn'),
+      loginBtn: document.getElementById('login-btn'),
+      passwordLoginBtn: document.getElementById('password-login-btn'),
+      
+      // ログインフォーム
+      loginForm: document.getElementById('login-form'),
+      loginPassword: document.getElementById('login-password'),
       
       // ユーザー情報
-      userInfo: document.getElementById('userInfo'),
-      userName: document.getElementById('userName'),
-      userPicture: document.getElementById('userPicture'),
-      logoutBtn: document.getElementById('logoutBtn'),
-      
-      // ヘッダーのユーザー情報
-      headerUserInfo: document.getElementById('headerUserInfo'),
-      headerUserName: document.getElementById('headerUserName'),
-      headerUserPicture: document.getElementById('headerUserPicture'),
+      userStatus: document.getElementById('user-status'),
+      authButtons: document.getElementById('auth-buttons'),
+      userName: document.getElementById('user-name'),
+      userAvatar: document.getElementById('user-avatar'),
+      logoutBtn: document.getElementById('logout-btn'),
       
       // モーダル制御
-      closeModalBtns: document.querySelectorAll('[data-close-modal]'),
+      closeModal: document.getElementById('close-modal'),
+      closeModalBtns: document.querySelectorAll('[id="close-modal"]'),
       
       // エラー表示
-      authError: document.getElementById('authError')
+      loginError: document.getElementById('login-error'),
+      loginErrorMessage: document.getElementById('login-error-message'),
+      
+      // ローディング表示
+      loginBtnText: document.getElementById('login-btn-text'),
+      loginSpinner: document.getElementById('login-spinner')
     }
     
     console.log('[AuthComponent] DOM elements cached')
@@ -399,7 +419,15 @@ class AuthComponent {
       })
     }
     
-    // デモログインボタン
+    // パスワードログインフォーム
+    if (this.elements.loginForm) {
+      this.elements.loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault()
+        await this.handlePasswordLogin()
+      })
+    }
+    
+    // デモログインボタン（レガシー対応）
     if (this.elements.demoLoginBtn) {
       this.elements.demoLoginBtn.addEventListener('click', async () => {
         await this.handleDemoLogin()
@@ -414,11 +442,20 @@ class AuthComponent {
     }
     
     // モーダル閉じるボタン
-    this.elements.closeModalBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
+    if (this.elements.closeModal) {
+      this.elements.closeModal.addEventListener('click', () => {
         this.hideAuthModal()
       })
-    })
+    }
+    
+    // 複数のモーダル閉じるボタンがある場合
+    if (this.elements.closeModalBtns && this.elements.closeModalBtns.length > 0) {
+      this.elements.closeModalBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          this.hideAuthModal()
+        })
+      })
+    }
     
     // モーダル背景クリックで閉じる
     if (this.elements.authModal) {
@@ -426,6 +463,13 @@ class AuthComponent {
         if (e.target === this.elements.authModal) {
           this.hideAuthModal()
         }
+      })
+    }
+    
+    // パスワード入力でエラーをクリア
+    if (this.elements.loginPassword) {
+      this.elements.loginPassword.addEventListener('input', () => {
+        this.clearError()
       })
     }
     
@@ -437,7 +481,48 @@ class AuthComponent {
   // ========================================
 
   /**
-   * デモログイン処理
+   * パスワードログイン処理
+   */
+  async handlePasswordLogin() {
+    try {
+      console.log('[AuthComponent] Processing password login...')
+      
+      // パスワードを取得
+      const password = this.elements.loginPassword ? this.elements.loginPassword.value.trim() : ''
+      
+      if (!password) {
+        this.showError('パスワードを入力してください')
+        return
+      }
+      
+      // ローディング状態を表示
+      this.setLoadingState(true)
+      this.clearError()
+      
+      // 認証サービスでパスワードログイン実行
+      await this.authService.login(password)
+      
+      // モーダルを閉じる
+      this.hideAuthModal()
+      
+      // フォームをリセット
+      if (this.elements.loginForm) {
+        this.elements.loginForm.reset()
+      }
+      
+      console.log('[AuthComponent] Password login completed successfully')
+      
+    } catch (error) {
+      console.error('[AuthComponent] Password login failed:', error)
+      this.showError(`ログインに失敗しました: ${error.message}`)
+    } finally {
+      this.setLoadingState(false)
+    }
+  }
+
+  /**
+   * デモログイン処理（レガシー互換性）
+   * @deprecated パスワード認証を使用してください
    */
   async handleDemoLogin() {
     try {
@@ -447,17 +532,12 @@ class AuthComponent {
       this.setLoadingState(true)
       this.clearError()
       
-      // 認証サービスでログイン実行
-      await this.authService.login()
-      
-      // モーダルを閉じる
-      this.hideAuthModal()
-      
-      console.log('[AuthComponent] Demo login completed successfully')
+      // 認証サービスでデモログイン実行（エラーが発生）
+      await this.authService.demoLogin()
       
     } catch (error) {
       console.error('[AuthComponent] Demo login failed:', error)
-      this.showError(`ログインに失敗しました: ${error.message}`)
+      this.showError(`デモログインは無効化されました。パスワードを入力してログインしてください。`)
     } finally {
       this.setLoadingState(false)
     }
@@ -544,6 +624,9 @@ class AuthComponent {
     if (this.elements.headerUserInfo) {
       this.elements.headerUserInfo.style.display = 'flex'
     }
+    
+    // 生成ボタンを有効化し、認証メッセージを非表示
+    this.enableGenerationButton()
   }
 
   /**
@@ -564,6 +647,9 @@ class AuthComponent {
     if (this.elements.headerUserInfo) {
       this.elements.headerUserInfo.style.display = 'none'
     }
+    
+    // 生成ボタンを無効化し、認証メッセージを表示
+    this.disableGenerationButton()
   }
 
   // ========================================
@@ -624,10 +710,73 @@ class AuthComponent {
    * @param {boolean} loading ローディング状態
    */
   setLoadingState(loading) {
+    // ログインフォーム関連の要素を無効化
+    if (this.elements.loginPassword) {
+      this.elements.loginPassword.disabled = loading
+    }
+    
+    // ログインボタンの状態更新
+    const loginSubmitBtn = document.querySelector('#login-form button[type="submit"]')
+    if (loginSubmitBtn) {
+      loginSubmitBtn.disabled = loading
+    }
+    
+    // ローディング表示の切り替え
+    if (this.elements.loginBtnText && this.elements.loginSpinner) {
+      if (loading) {
+        this.elements.loginBtnText.style.display = 'none'
+        this.elements.loginSpinner.style.display = 'inline-block'
+      } else {
+        this.elements.loginBtnText.style.display = 'inline'
+        this.elements.loginSpinner.style.display = 'none'
+      }
+    }
+    
+    // デモログインボタン（レガシー対応）
     if (this.elements.demoLoginBtn) {
       this.elements.demoLoginBtn.disabled = loading
       this.elements.demoLoginBtn.textContent = loading ? 'ログイン中...' : 'デモログイン'
     }
+  }
+  
+  /**
+   * 生成ボタンを有効化
+   */
+  enableGenerationButton() {
+    const generateBtn = document.getElementById('generate-btn')
+    const authMessage = document.getElementById('auth-required-message')
+    
+    if (generateBtn) {
+      generateBtn.disabled = false
+      generateBtn.classList.remove('opacity-50', 'cursor-not-allowed')
+      generateBtn.classList.add('hover:bg-blue-700')
+    }
+    
+    if (authMessage) {
+      authMessage.style.display = 'none'
+    }
+    
+    console.log('[AuthComponent] Generation button enabled')
+  }
+  
+  /**
+   * 生成ボタンを無効化
+   */
+  disableGenerationButton() {
+    const generateBtn = document.getElementById('generate-btn')
+    const authMessage = document.getElementById('auth-required-message')
+    
+    if (generateBtn) {
+      generateBtn.disabled = true
+      generateBtn.classList.add('opacity-50', 'cursor-not-allowed')
+      generateBtn.classList.remove('hover:bg-blue-700')
+    }
+    
+    if (authMessage) {
+      authMessage.style.display = 'block'
+    }
+    
+    console.log('[AuthComponent] Generation button disabled')
   }
 }
 
@@ -645,6 +794,9 @@ class AppService {
     
     /** @type {AuthComponent} 認証UIコンポーネント */
     this.authComponent = new AuthComponent(this.authService)
+    
+    /** @type {UsageManager} 使用回数管理 */
+    this.usageManager = window.UsageManager ? new window.UsageManager() : null
     
     /** @type {Object} アプリケーション状態 */
     this.state = {
@@ -676,6 +828,9 @@ class AppService {
       
       // 変換フォームを初期化
       this.initializeConversionForm()
+      
+      // 使用制限システムを初期化
+      this.initializeUsageControl()
       
       // 履歴を初期化
       this.initializeHistory()
@@ -755,6 +910,11 @@ class AppService {
       
       console.log('[AppService] Starting AI conversion...', { textLength: text.length })
       
+      // 使用制限チェック
+      if (!this.checkUsageLimits()) {
+        return
+      }
+      
       // 処理開始
       this.setConversionLoadingState(true)
       
@@ -786,6 +946,9 @@ class AppService {
       if (result.success) {
         // 変換結果を表示
         this.displayConversionResult(result)
+        
+        // ゲスト使用を記録
+        this.recordGuestUsage()
         
         // 履歴に追加
         this.addToHistory({
@@ -1089,3 +1252,139 @@ document.addEventListener('DOMContentLoaded', async () => {
 })
 
 console.log('📋 タップカルテ - リファクタリング版JavaScript読み込み完了')
+  // ========================================
+  // 📊 使用制限システム
+  // ========================================
+  
+  /**
+   * 使用制限システムを初期化
+   */
+  initializeUsageControl() {
+    if (!this.usageManager) {
+      console.warn('[AppService] UsageManager not available')
+      return
+    }
+    
+    // 認証状態変更時の使用制限更新
+    this.authService.addAuthListener((isAuthenticated) => {
+      this.updateUsageLimits(isAuthenticated)
+    })
+    
+    // 初期状態の使用制限を設定
+    this.updateUsageLimits(this.authService.isAuthenticated())
+    
+    console.log('[AppService] Usage control initialized')
+  }
+  
+  /**
+   * 使用制限の状態を更新
+   * @param {boolean} isAuthenticated ログイン状態
+   */
+  updateUsageLimits(isAuthenticated) {
+    const generateBtn = document.getElementById('generate-btn')
+    const authMessage = document.getElementById('auth-required-message')
+    const usageMessage = this.getOrCreateUsageLimitMessage()
+    
+    if (isAuthenticated) {
+      // ログインユーザー: 無制限
+      if (generateBtn) {
+        generateBtn.disabled = false
+        generateBtn.classList.remove('opacity-50', 'cursor-not-allowed')
+        generateBtn.classList.add('hover:bg-pink-700')
+      }
+      if (authMessage) authMessage.style.display = 'none'
+      if (usageMessage) usageMessage.style.display = 'none'
+      
+      console.log('[AppService] Unlimited access enabled for authenticated user')
+      
+    } else {
+      // 非ログインユーザー: 1日1回制限
+      const canGenerate = this.usageManager.canGuestGenerate()
+      
+      if (generateBtn) {
+        generateBtn.disabled = !canGenerate
+        if (canGenerate) {
+          generateBtn.classList.remove('opacity-50', 'cursor-not-allowed')
+          generateBtn.classList.add('hover:bg-pink-700')
+        } else {
+          generateBtn.classList.add('opacity-50', 'cursor-not-allowed')
+          generateBtn.classList.remove('hover:bg-pink-700')
+        }
+      }
+      
+      if (authMessage) authMessage.style.display = 'none'
+      
+      if (usageMessage) {
+        if (canGenerate) {
+          usageMessage.style.display = 'none'
+        } else {
+          usageMessage.style.display = 'block'
+          usageMessage.innerHTML = `
+            <div class="flex items-center space-x-2">
+              <i class="fas fa-clock text-red-600"></i>
+              <span class="text-sm font-semibold text-red-700">本日の無料利用回数を超えました</span>
+            </div>
+            <p class="text-sm text-red-600 mt-1">
+              新規ユーザーは1日1回まで無料でご利用いただけます。無制限利用にはログインが必要です。
+            </p>
+          `
+        }
+      }
+      
+      console.log('[AppService] Guest usage limits updated:', { canGenerate })
+    }
+  }
+  
+  /**
+   * 使用制限メッセージ要素を取得または作成
+   * @returns {HTMLElement} 使用制限メッセージ要素
+   */
+  getOrCreateUsageLimitMessage() {
+    return document.getElementById('usage-limit-message')
+  }
+  
+  /**
+   * 生成実行時の使用制限チェック
+   * @returns {boolean} 生成可能かどうか
+   */
+  checkUsageLimits() {
+    const isAuthenticated = this.authService.isAuthenticated()
+    
+    if (isAuthenticated) {
+      // ログインユーザーは無制限
+      return true
+    }
+    
+    if (!this.usageManager) {
+      console.warn('[AppService] UsageManager not available, allowing generation')
+      return true
+    }
+    
+    const canGenerate = this.usageManager.canGuestGenerate()
+    
+    if (!canGenerate) {
+      this.showUsageLimitError()
+      return false
+    }
+    
+    return true
+  }
+  
+  /**
+   * 使用制限エラーを表示
+   */
+  showUsageLimitError() {
+    const errorMessage = '本日の無料利用回数を超えました。無制限利用にはログインしてください。'
+    alert(errorMessage)
+  }
+  
+  /**
+   * ゲスト利用を記録
+   */
+  recordGuestUsage() {
+    if (this.usageManager && !this.authService.isAuthenticated()) {
+      this.usageManager.recordGuestUsage()
+      // 使用制限を再更新
+      this.updateUsageLimits(false)
+    }
+  }

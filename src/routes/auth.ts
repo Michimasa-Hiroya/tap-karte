@@ -16,29 +16,61 @@ import { logger, getCurrentTimestamp, generateId, generateDemoUser, generateDemo
 const auth = new Hono<{ Bindings: CloudflareBindings }>()
 
 /**
- * デモログイン認証エンドポイント
- * POST /api/auth/demo-login
+ * パスワード認証ログインエンドポイント
+ * POST /api/auth/login
  */
-auth.post('/demo-login', async (c) => {
+auth.post('/login', async (c) => {
   const requestId = c.get('requestId') || 'unknown'
   
   try {
-    logger.info('Demo authentication requested', {
+    // リクエストボディから認証情報を取得
+    const body = await c.req.json()
+    const { password } = body
+
+    logger.info('Password authentication requested', {
       requestId,
       userAgent: c.req.header('User-Agent')?.substring(0, 100),
-      timestamp: getCurrentTimestamp()
+      timestamp: getCurrentTimestamp(),
+      hasPassword: !!password
     })
 
-    // デモユーザー情報を生成
+    // パスワードの検証
+    if (!password) {
+      logger.warn('Login attempt without password', { requestId })
+      
+      return c.json<ApiResponse<AuthResponse>>({
+        success: false,
+        error: 'パスワードが入力されていません'
+      }, 400)
+    }
+
+    // 固定パスワード「656110」との照合
+    const DEMO_PASSWORD = '656110'
+    if (password !== DEMO_PASSWORD) {
+      logger.warn('Login attempt with invalid password', {
+        requestId,
+        passwordLength: password.length,
+        timestamp: getCurrentTimestamp()
+      })
+      
+      // セキュリティ上、パスワード間違いの詳細は記録するが、レスポンスは一般的なメッセージ
+      return c.json<ApiResponse<AuthResponse>>({
+        success: false,
+        error: 'パスワードが正しくありません'
+      }, 401)
+    }
+
+    // パスワード認証成功 - デモユーザー情報を生成
     const demoUser: User = generateDemoUser()
     
-    // デモ認証トークンを生成
+    // 認証トークンを生成
     const authToken = generateDemoAuthToken(demoUser)
     
-    logger.info('Demo authentication successful', {
+    logger.info('Password authentication successful', {
       requestId,
       userId: demoUser.id,
-      userName: demoUser.name
+      userName: demoUser.name,
+      timestamp: getCurrentTimestamp()
     })
 
     return c.json<ApiResponse<AuthResponse>>({
@@ -52,16 +84,36 @@ auth.post('/demo-login', async (c) => {
 
   } catch (error) {
     const errorInstance = error as Error
-    logger.error('Demo authentication failed', {
+    logger.error('Password authentication failed', {
       requestId,
-      error: errorInstance.message
+      error: errorInstance.message,
+      timestamp: getCurrentTimestamp()
     })
 
     return c.json<ApiResponse<AuthResponse>>({
       success: false,
-      error: 'デモ認証に失敗しました'
+      error: 'ログイン処理に失敗しました'
     }, 500)
   }
+})
+
+/**
+ * 旧デモログインエンドポイント（後方互換性のため）
+ * POST /api/auth/demo-login
+ */
+auth.post('/demo-login', async (c) => {
+  const requestId = c.get('requestId') || 'unknown'
+  
+  logger.info('Legacy demo login endpoint accessed', {
+    requestId,
+    timestamp: getCurrentTimestamp()
+  })
+
+  // 新しいログインエンドポイントへリダイレクト案内
+  return c.json<ApiResponse<AuthResponse>>({
+    success: false,
+    error: 'パスワード入力が必要です。ログインボタンからパスワードを入力してください。'
+  }, 400)
 })
 
 /**

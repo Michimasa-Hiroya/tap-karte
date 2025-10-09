@@ -24,10 +24,7 @@ import {
   optionalAuth,
   errorHandler,
   notFoundHandler,
-  rateLimit,
-  securityAnomalyDetection,
-  apiUsageMonitoring,
-  inputSecurityValidation
+  rateLimit
 } from './middleware'
 
 // ルート
@@ -55,11 +52,6 @@ app.use(renderer)
 app.use('*', securityHeaders())
 app.use('/api/*', corsSettings())
 app.use('/api/*', inputValidation())
-
-// 高度セキュリティミドルウェア
-app.use('*', securityAnomalyDetection())
-app.use('/api/*', apiUsageMonitoring())
-app.use('/api/*', inputSecurityValidation())
 
 // ログ・監視ミドルウェア
 app.use('*', requestLogging())
@@ -233,34 +225,53 @@ const AuthModalComponent = () => (
           </button>
         </div>
         
-        <div className="text-center mb-6">
-          <div className="mb-4">
-            <i className="fas fa-user-circle text-4xl text-pink-500 mb-3 block"></i>
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">デモ環境でログイン</h3>
-            <p className="text-sm text-gray-500">すぐに全機能をお試しいただけます</p>
+        {/* パスワード認証フォーム */}
+        <form id="login-form" className="space-y-4">
+          <div className="text-center mb-4">
+            <i className="fas fa-lock text-4xl text-pink-500 mb-3 block"></i>
+            <h3 className="text-lg font-semibold text-gray-700 mb-2">パスワードでログイン</h3>
+            <p className="text-sm text-gray-500">パスワードを入力してください</p>
+          </div>
+          
+          <div>
+            <label htmlFor="login-password" className="block text-sm font-medium text-gray-700 mb-2">
+              パスワード
+            </label>
+            <input
+              type="password"
+              id="login-password"
+              name="password"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
+              placeholder="パスワードを入力"
+              required
+            />
+          </div>
+          
+          {/* エラーメッセージ */}
+          <div id="login-error-message" className="hidden text-red-600 text-sm bg-red-50 border border-red-200 rounded-md p-3">
           </div>
           
           <button 
-            id="demo-login-btn" 
-            className="w-full px-6 py-3 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-all flex items-center justify-center space-x-3 font-medium shadow-sm"
+            type="submit"
+            className="w-full px-6 py-3 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-all font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <i className="fas fa-play-circle text-xl"></i>
-            <span>デモログインで開始</span>
+            <span id="login-btn-text">ログイン</span>
+            <span id="login-spinner" className="hidden inline-block w-4 h-4 ml-2 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
           </button>
-          
-          <div className="mt-4 text-xs text-gray-500">
-            <div className="p-3 bg-pink-50 border border-pink-200 rounded text-pink-700">
-              <p className="font-semibold mb-1">🎯 デモ環境について</p>
-              <p>すべての機能を制限なく体験できます。ログイン状態はブラウザに保存され、継続してご利用いただけます。</p>
-            </div>
-            <p className="mt-2">
-              ログインすることで、
-              <a href="#privacy-policy" className="text-pink-600 hover:text-pink-800 underline">
-                プライバシーポリシー
-              </a>
-              に同意したものとみなされます。
-            </p>
+        </form>
+        
+        <div className="mt-6 text-xs text-gray-500">
+          <div className="p-3 bg-pink-50 border border-pink-200 rounded text-pink-700">
+            <p className="font-semibold mb-1">🔐 セキュアログイン</p>
+            <p>パスワード認証により、安全にシステムにアクセスできます。</p>
           </div>
+          <p className="mt-2">
+            ログインすることで、
+            <a href="#privacy-policy" className="text-pink-600 hover:text-pink-800 underline">
+              プライバシーポリシー
+            </a>
+            に同意したものとみなされます。
+          </p>
         </div>
       </div>
     </div>
@@ -408,11 +419,28 @@ const InputAreaComponent = () => (
       ></textarea>
     </div>
     
+    {/* 認証必須メッセージ */}
+    <div id="auth-required-message" className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+      <div className="flex items-center space-x-2">
+        <i className="fas fa-lock text-yellow-600"></i>
+        <span className="text-sm font-semibold text-yellow-700">ログインが必要です</span>
+      </div>
+      <p className="text-sm text-yellow-600 mt-1">
+        生成機能をご利用いただくには、ログインが必要です。右上の「ログイン」ボタンからログインしてください。
+      </p>
+    </div>
+    
+    {/* 使用制限メッセージ */}
+    <div id="usage-limit-message" className="mb-3 p-3 bg-red-50 border border-red-200 rounded-md hidden">
+      {/* 動的に内容が更新されます */}
+    </div>
+    
     <div className="flex justify-between items-center">
       <div className="flex space-x-2">
         <button 
-          id="convert-btn" 
-          className="px-6 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          id="generate-btn" 
+          disabled
+          className="px-6 py-2 bg-pink-600 text-white rounded-lg transition-colors opacity-50 cursor-not-allowed disabled:opacity-50 disabled:cursor-not-allowed"
         >
           生成
         </button>
@@ -558,6 +586,7 @@ const FooterComponent = () => (
  */
 const ScriptComponents = () => (
   <>
+    <script src="/static/usage-manager.js"></script>
     <script src="/static/app-refactored.js"></script>
   </>
 )
