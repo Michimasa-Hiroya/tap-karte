@@ -260,19 +260,7 @@ const AuthModalComponent = () => (
           </button>
         </form>
         
-        <div className="mt-6 text-xs text-gray-500">
-          <div className="p-3 bg-pink-50 border border-pink-200 rounded text-pink-700">
-            <p className="font-semibold mb-1">🔐 セキュアログイン</p>
-            <p>パスワード認証により、安全にシステムにアクセスできます。</p>
-          </div>
-          <p className="mt-2">
-            ログインすることで、
-            <a href="#privacy-policy" className="text-pink-600 hover:text-pink-800 underline">
-              プライバシーポリシー
-            </a>
-            に同意したものとみなされます。
-          </p>
-        </div>
+
       </div>
     </div>
   </div>
