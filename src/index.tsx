@@ -464,9 +464,13 @@ const SecurityWarningComponent = () => (
       <i className="fas fa-exclamation-triangle text-red-500"></i>
       <span className="text-sm font-semibold text-red-700">注意</span>
     </div>
-    <p className="text-sm text-red-600 mt-1">
-      個人情報(氏名や住所など)や個人が特定できる情報、珍しい病名などの入力は禁止します。
-    </p>
+    <div className="text-sm text-red-600 mt-1 space-y-1">
+      <p>個人情報(氏名や住所など)や個人が特定できる情報、珍しい病名などの入力は禁止します。</p>
+      <p className="pt-1 border-t border-red-300">
+        <i className="fas fa-info-circle mr-1"></i>
+        <strong>利用制限:</strong> 新規ユーザーは1日1回まで無料利用可能、ログインユーザーは無制限利用できます。
+      </p>
+    </div>
   </div>
 )
 

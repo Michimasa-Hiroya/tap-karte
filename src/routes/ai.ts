@@ -368,6 +368,37 @@ function buildConversionPrompt(
 ): string {
   const { style, docType, format, charLimit } = options
 
+  if (format === 'SOAP形式') {
+    return `あなたは経験豊富な看護師です。以下のメモを医療現場で標準的なSOAP形式の${docType}に変換してください。
+
+【重要な指示】
+1. 必ずSOAP形式（S・O・A・P）で構成する
+2. ${style}で統一する
+3. 入力内容のみに基づいて記録を作成し、憶測で情報を追加しない
+4. 出力は${charLimit}文字以内に収める
+5. 各項目は簡潔で具体的に記述する
+
+【SOAP形式の構成】
+S (Subjective): 患者の主観的情報・訴え・発言
+O (Objective): 客観的に観察できる事実・データ・バイタルサイン
+A (Assessment): 看護師によるアセスメント・評価・判断
+P (Plan): 今後の看護計画・対応策・継続観察事項
+
+【医療用語辞書】
+${medicalTermsContext}
+
+【入力メモ】
+${text}
+
+【出力フォーマット例】
+S: 患者の訴えや主観的症状
+O: 観察された事実やデータ
+A: 看護師としてのアセスメント
+P: 今後の計画や対応
+
+【${docType}（SOAP形式・${style}・${charLimit}文字以内）】`
+  }
+
   return `あなたは経験豊富な看護師です。以下の口頭メモや簡潔なメモを、適切な${docType}として整理してください。
 
 【重要な指示】
@@ -376,18 +407,10 @@ function buildConversionPrompt(
 3. ${format}で出力する
 4. 出力は${charLimit}文字以内に収める
 5. 以下の医療用語辞書を参考にして、適切な専門用語を使用する
+6. 自然な時系列順で読みやすく整理する
 
 【医療用語辞書】
 ${medicalTermsContext}
-
-【${format}について】
-${format === 'SOAP形式' 
-  ? `- S (Subjective): 主観的情報・患者の訴え
-- O (Objective): 客観的情報・観察事実
-- A (Assessment): アセスメント・評価
-- P (Plan): 計画・今後の対応`
-  : '- 時系列に沿った自然な文章形式で記述'
-}
 
 【入力メモ】
 ${text}

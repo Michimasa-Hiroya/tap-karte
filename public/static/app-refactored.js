@@ -914,6 +914,11 @@ class AppService {
       const charLimitSlider = document.getElementById('char-limit-slider')
       const charLimit = charLimitSlider ? parseInt(charLimitSlider.value) : 500
 
+      // 選択されたオプションを取得
+      const selectedOptions = this.getSelectedOptions()
+      
+      console.log('[AppService] Selected options:', selectedOptions)
+
       // API呼び出し
       const response = await fetch('/api/ai/convert', {
         method: 'POST',
@@ -925,12 +930,10 @@ class AppService {
         },
         body: JSON.stringify({
           text: text,
-          options: {
-            format: 'medical_record',
-            style: 'professional',
-            include_suggestions: true,
-            charLimit: charLimit
-          }
+          style: selectedOptions.style,
+          docType: selectedOptions.docType,
+          format: selectedOptions.format,
+          charLimit: charLimit
         })
       })
       
@@ -1305,6 +1308,43 @@ class AppService {
       textInput.value = ''
       this.updateCharacterCount()
       textInput.focus()
+    }
+  }
+
+  /**
+   * 選択されたオプションを取得
+   */
+  getSelectedOptions() {
+    // デフォルト値
+    let docType = '記録'
+    let format = '文章形式'
+    let style = 'だ・である体'
+    
+    // ドキュメント種別の確認
+    const docRecordBtn = document.getElementById('doc-record')
+    const docReportBtn = document.getElementById('doc-report')
+    if (docReportBtn && docReportBtn.classList.contains('bg-pink-600')) {
+      docType = '報告書'
+    }
+    
+    // フォーマットの確認
+    const formatTextBtn = document.getElementById('format-text')
+    const formatSoapBtn = document.getElementById('format-soap')
+    if (formatSoapBtn && formatSoapBtn.classList.contains('bg-pink-600')) {
+      format = 'SOAP形式'
+    }
+    
+    // 文体の確認
+    const stylePlainBtn = document.getElementById('style-plain')
+    const stylePoliteBtn = document.getElementById('style-polite')
+    if (stylePoliteBtn && stylePoliteBtn.classList.contains('bg-pink-600')) {
+      style = 'ですます体'
+    }
+    
+    return {
+      docType,
+      format,
+      style
     }
   }
 
