@@ -174,7 +174,7 @@ const HeaderComponent = () => (
                 <p className="text-xs text-pink-700 font-medium leading-tight whitespace-nowrap">
                   {APP_CONFIG.tagline}
                 </p>
-                <p className="text-xs text-pink-600 leading-tight">
+                <p className="text-xs text-pink-100 leading-tight">
                   看護記録AI・医療記録作成
                 </p>
               </div>
@@ -309,7 +309,7 @@ const OptionsBarComponent = () => (
     <div className="mb-4">
       <h2 className="text-lg font-bold text-pink-800 mb-2 flex items-center">
         <i className="fas fa-cogs text-pink-600 mr-2"></i>
-        看護記録・医療記録の作成設定
+        看護記録の作成設定
       </h2>
       <p className="text-sm text-pink-700">
         病院・施設の<strong>電子カルテシステム</strong>や<strong>看護業務</strong>に応じた書式を選択
@@ -321,7 +321,7 @@ const OptionsBarComponent = () => (
         title="医療文書種別"
         options={[
           { id: "doc-record", label: "看護記録", active: true },
-          { id: "doc-report", label: "申し送り・報告書", active: false }
+          { id: "doc-report", label: "報告書", active: false }
         ]}
       />
       
@@ -414,13 +414,13 @@ const InputAreaComponent = () => (
       <div className="flex justify-between items-center mb-2">
         <label className="block text-base font-bold text-pink-800 flex items-center">
           <i className="fas fa-edit text-pink-600 mr-2"></i>
-          患者情報・看護ケア内容の入力
+          看護内容の入力
         </label>
         <span id="input-count" className="text-sm text-pink-600">0文字</span>
       </div>
       
       <p className="text-sm text-pink-700 mb-3">
-        <strong>看護観察</strong>や<strong>患者ケア</strong>の内容を自然な文章でご入力ください
+        看護の内容を自然な文章で入力してください。
       </p>
       
       <SecurityWarningComponent />
@@ -428,7 +428,7 @@ const InputAreaComponent = () => (
       <textarea 
         id="input-text"
         className="w-full h-80 p-4 border border-pink-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-        placeholder="・患者観察やケア内容を、思ったまま入力&#10;・「バイタル測定した」「薬を服薬させた」など自然な表現でOK&#10;・箇条書きやメモ書きでも大丈夫&#10;・音声入力にも対応・誤字脱字は自動で修正&#10;・看護計画や申し送り事項もそのまま入力可能"
+        placeholder="・「バイタル測定した」「薬を服薬させた」など自然な表現でOK&#10;・箇条書きやメモ書きでも大丈夫&#10;・音声入力にも対応・誤字脱字は自動で修正"
       ></textarea>
     </div>
     
@@ -486,19 +486,14 @@ const OutputAreaComponent = () => (
         <span id="output-count" className="text-sm text-pink-600">0文字</span>
       </div>
       
-      <p className="text-sm text-pink-700 mb-3">
-        <strong>電子カルテ</strong>にそのまま貼り付け可能な標準的な<strong>看護記録形式</strong>で出力
-      </p>
+
       
       <div 
         id="output-text"
         className="w-full h-80 p-4 bg-pink-25 border border-pink-300 rounded-lg overflow-y-auto whitespace-pre-wrap"
       >
         <div className="text-pink-400 italic">
-          専門的な看護記録・医療文書がここに自動生成されます...<br />
-          ✓ 医療用語を適切に使用<br />
-          ✓ 標準的な記録形式<br />
-          ✓ 電子カルテシステム対応
+          看護記録・医療文書がここに自動生成されます。
         </div>
       </div>
     </div>
@@ -509,10 +504,10 @@ const OutputAreaComponent = () => (
           id="copy-btn" 
           className="flex items-center space-x-2 px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
           disabled
-          title="電子カルテにコピー＆ペースト"
+          title="コピー＆ペースト"
         >
           <i className="fas fa-copy"></i>
-          <span>電子カルテにコピー</span>
+          <span>コピー</span>
         </button>
         <div id="loading" className="hidden flex items-center space-x-2 text-pink-600 ml-2">
           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-pink-600"></div>
