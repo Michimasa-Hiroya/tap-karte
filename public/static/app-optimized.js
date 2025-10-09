@@ -1018,7 +1018,10 @@ class AppService {
       return
     }
     
-    const convertedText = result.converted_text || '変換結果が空です'
+    let convertedText = result.converted_text || '変換結果が空です'
+    
+    // アスタリスク（**）を除去
+    convertedText = convertedText.replace(/\*\*/g, '')
     
     // 結果表示
     outputText.innerHTML = convertedText.replace(/\n/g, '<br>')
@@ -1283,11 +1286,21 @@ class AppService {
   }
 
   /**
-   * 入力クリア
+   * 入力クリア（確認ダイアログ付き）
    */
   clearInput() {
     const textInput = this.uiManager.elements.conversion?.inputText
-    if (textInput) {
+    if (textInput && textInput.value.trim()) {
+      // 入力内容がある場合のみ確認ダイアログを表示
+      const confirmed = confirm('入力内容をクリアしますか？')
+      if (confirmed) {
+        textInput.value = ''
+        this.updateCharacterCount()
+        textInput.focus()
+        console.log('[AppService] Input cleared by user confirmation')
+      }
+    } else if (textInput) {
+      // 入力内容が空の場合はそのままクリア
       textInput.value = ''
       this.updateCharacterCount()
       textInput.focus()
@@ -1357,11 +1370,11 @@ class AppService {
           usageMessage.style.display = "block"
           usageMessage.innerHTML = `
             <div class="text-center">
-              <p class="text-sm text-blue-600 mb-2">
+              <p class="text-sm text-pink-600 mb-2">
                 <i class="fas fa-info-circle mr-1"></i>
                 <strong>利用制限:</strong> 新規ユーザーは1日1回まで無料利用可能
               </p>
-              <p class="text-sm text-orange-600 font-medium">
+              <p class="text-sm text-pink-700 font-medium">
                 <i class="fas fa-key mr-1"></i>
                 ログインすると<strong>無制限</strong>でご利用いただけます
               </p>
