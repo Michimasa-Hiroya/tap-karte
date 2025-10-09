@@ -63,12 +63,77 @@ const CSS_CLASSES = {
 /** DOM要素取得のヘルパー */
 const DOM = {
   /**
-   * 要素を安全に取得
+   * 要素を安全に取得（Safari対応の堅牢版）
    * @param {string} id - 要素ID
+   * @param {number} retryCount - リトライ回数
    * @returns {HTMLElement|null}
    */
-  get(id) {
-    return document.getElementById(id)
+  get(id, retryCount = 0) {
+    const element = document.getElementById(id)
+    if (element) {
+      return element
+    }
+    
+    // Safari用のフォールバック：要素が見つからない場合は少し待って再試行
+    if (retryCount < 3 && (this.isSafari() || this.isWebKit())) {
+      console.log(`[DOM] Element '${id}' not found on Safari, retrying... (${retryCount + 1}/3)`)
+      setTimeout(() => {
+        return this.get(id, retryCount + 1)
+      }, 100)
+    }
+    
+    return null
+  },
+
+  /**
+   * 要素を待機して取得（Safari対応）
+   * @param {string} id - 要素ID
+   * @param {number} maxWait - 最大待機時間（ms）
+   * @returns {Promise<HTMLElement|null>}
+   */
+  async waitForElement(id, maxWait = 5000) {
+    return new Promise((resolve) => {
+      const element = document.getElementById(id)
+      if (element) {
+        resolve(element)
+        return
+      }
+
+      let attempts = 0
+      const maxAttempts = maxWait / 100
+
+      const interval = setInterval(() => {
+        const element = document.getElementById(id)
+        if (element) {
+          clearInterval(interval)
+          resolve(element)
+          return
+        }
+
+        attempts++
+        if (attempts >= maxAttempts) {
+          clearInterval(interval)
+          console.warn(`[DOM] Element '${id}' not found after ${maxWait}ms`)
+          resolve(null)
+        }
+      }, 100)
+    })
+  },
+
+  /**
+   * Safari判定
+   * @returns {boolean}
+   */
+  isSafari() {
+    return /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent)
+  },
+
+  /**
+   * WebKit判定
+   * @returns {boolean}
+   */
+  isWebKit() {
+    return /WebKit/.test(navigator.userAgent)
   },
 
   /**
@@ -731,9 +796,15 @@ class UIManager {
   }
 
   /**
-   * DOM要素をキャッシュ
+   * DOM要素をキャッシュ（Safari対応版）
    */
-  cacheDOMElements() {
+  async cacheDOMElements() {
+    // Safari用の特別処理：DOM準備完了まで待機
+    if (DOM.isSafari() || DOM.isWebKit()) {
+      console.log('[UIManager] Safari detected, waiting for DOM elements...')
+      await new Promise(resolve => setTimeout(resolve, 200))
+    }
+
     // 認証関連要素
     this.elements.auth = {
       modal: DOM.get('auth-modal'),
@@ -749,7 +820,7 @@ class UIManager {
       loginError: DOM.get('login-error-message')
     }
 
-    // 変換関連要素
+    // 変換関連要素（Safari用の特別処理を追加）
     this.elements.conversion = {
       inputText: DOM.get('input-text'),
       outputText: DOM.get('output-text'),
@@ -761,7 +832,7 @@ class UIManager {
       charLimitSlider: DOM.get('char-limit-slider'),
       charLimitDisplay: DOM.get('char-limit-display'),
       authMessage: DOM.get('auth-required-message'),
-      usageMessage: DOM.get('usage-limit-message')
+      usageMessage: await DOM.waitForElement('usage-limit-message', 3000) // Safari用の待機処理
     }
 
     // オプション関連要素  
@@ -894,26 +965,26 @@ class AppService {
   // ========================================
 
   /**
-   * アプリケーション初期化
+   * アプリケーション初期化（Safari対応版）
    */
   async initialize() {
     try {
       console.log('[AppService] Starting application initialization...')
       
-      // DOM要素キャッシュ
-      this.uiManager.cacheDOMElements()
+      // DOM要素キャッシュ（Safari対応の非同期版）
+      await this.uiManager.cacheDOMElements()
       
       // 保存された認証情報をロード
       this.authService.loadStoredAuth()
       
-      // 認証状態監視設定
-      this.authService.addAuthListener((isAuthenticated, user) => {
+      // 認証状態監視設定（非同期対応）
+      this.authService.addAuthListener(async (isAuthenticated, user) => {
         this.uiManager.updateAuthUI(isAuthenticated, user)
-        this.updateUsageLimits(isAuthenticated)
+        await this.updateUsageLimits(isAuthenticated)
       })
       
-      // 使用制限システム初期化（認証UIより先に）
-      this.initializeUsageControl()
+      // 使用制限システム初期化（認証UIより先に・Safari対応版）
+      await this.initializeUsageControl()
       
       // 各種UI要素初期化
       this.initializeAuthUI()
@@ -1548,27 +1619,42 @@ class AppService {
   // ========================================
   
   /**
-   * 使用制限システム初期化
+   * 使用制限システム初期化（Safari対応版）
    */
-  initializeUsageControl() {
+  async initializeUsageControl() {
     // 認証状態変更時の制限更新
-    this.authService.addAuthListener((isAuthenticated) => {
-      this.updateUsageLimits(isAuthenticated)
+    this.authService.addAuthListener(async (isAuthenticated) => {
+      await this.updateUsageLimits(isAuthenticated)
     })
     
-    // 初期状態設定
-    this.updateUsageLimits(this.authService.isAuthenticated())
+    // 初期状態設定（Safari用の待機処理）
+    await this.updateUsageLimits(this.authService.isAuthenticated())
     
     console.log("[AppService] Usage control initialized")
   }
   
   /**
-   * 使用制限状態更新（機能完全維持）
+   * 使用制限状態更新（Safari対応版）
    */
-  updateUsageLimits(isAuthenticated) {
+  async updateUsageLimits(isAuthenticated) {
     const generateBtn = this.uiManager.elements.conversion?.generateBtn
     const authMessage = this.uiManager.elements.conversion?.authMessage
-    const usageMessage = this.uiManager.elements.conversion?.usageMessage
+    let usageMessage = this.uiManager.elements.conversion?.usageMessage
+    
+    // Safari用: usageMessage要素が見つからない場合は再取得を試行
+    if (!usageMessage && (DOM.isSafari() || DOM.isWebKit())) {
+      console.log('[AppService] Usage message element not found on Safari, retrying...')
+      usageMessage = await DOM.waitForElement('usage-limit-message', 2000)
+      
+      if (usageMessage) {
+        // 要素が見つかった場合はキャッシュを更新
+        this.uiManager.elements.conversion.usageMessage = usageMessage
+        console.log('[AppService] Usage message element successfully retrieved on Safari')
+      } else {
+        console.error('[AppService] Failed to retrieve usage message element on Safari')
+        return
+      }
+    }
     
     if (isAuthenticated) {
       // ログインユーザー: 無制限
@@ -1602,8 +1688,17 @@ class AppService {
       
       if (usageMessage) {
         if (canGenerate) {
+          // Safari用の特別処理：hidden クラスを明示的に削除
+          if (DOM.isSafari() || DOM.isWebKit()) {
+            usageMessage.classList.remove('hidden')
+            usageMessage.style.display = "block"
+            usageMessage.style.visibility = "visible"
+            console.log('[AppService] Safari: Usage message visibility forced')
+          } else {
+            usageMessage.style.display = "block"
+          }
+          
           // 利用可能な場合：利用制限の説明を表示
-          usageMessage.style.display = "block"
           usageMessage.innerHTML = `
             <div class="text-center">
               <p class="text-sm text-pink-600 mb-2">
@@ -1617,8 +1712,17 @@ class AppService {
             </div>
           `
         } else {
+          // Safari用の特別処理：hidden クラスを明示的に削除
+          if (DOM.isSafari() || DOM.isWebKit()) {
+            usageMessage.classList.remove('hidden')
+            usageMessage.style.display = "block"
+            usageMessage.style.visibility = "visible"
+            console.log('[AppService] Safari: Usage limit message visibility forced')
+          } else {
+            usageMessage.style.display = "block"
+          }
+          
           // 利用制限に達した場合：制限メッセージを表示
-          usageMessage.style.display = "block"
           usageMessage.innerHTML = `
             <div class="flex items-center justify-center space-x-3 mb-3">
               <div class="flex items-center space-x-2">

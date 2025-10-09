@@ -419,8 +419,8 @@ const InputAreaComponent = () => (
       </p>
     </div>
     
-    {/* 使用制限メッセージ - より目立つように改良 */}
-    <div id="usage-limit-message" className="mb-4 p-4 bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-lg shadow-sm hidden">
+    {/* 使用制限メッセージ - Safari対応版 */}
+    <div id="usage-limit-message" className="mb-4 p-4 bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-lg shadow-sm" style={{display: 'none'}}>
       {/* 動的に内容が更新されます */}
     </div>
     
