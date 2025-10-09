@@ -1,0 +1,33 @@
+# robots.txt for タップカルテ (tap-karte.com)
+# 看護記録・カルテ作成AI - 医療従事者向けAIツール
+
+User-agent: *
+Allow: /
+
+# 重要なページを明示的に許可
+Allow: /
+Allow: /api/
+Allow: /static/
+Allow: /manifest.json
+Allow: /favicon.ico
+
+# Sitemap の場所
+Sitemap: https://tap-karte.com/sitemap.xml
+
+# 主要検索エンジン向け特別設定
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Slurp
+Allow: /
+Crawl-delay: 2
+
+# SEO最適化情報
+# Keywords: 看護記録, カルテ作成, AI, 看護師, 医療記録, 電子カルテ, SOAP記録, 看護業務効率化
+# Target: 看護師, 医療従事者, 病院, クリニック, 介護施設
+# Location: 日本全国の医療機関

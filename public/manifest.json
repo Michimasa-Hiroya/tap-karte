@@ -1,13 +1,13 @@
 {
-  "name": "タップカルテ - 思ったことを、そのままカルテに",
+  "name": "タップカルテ - 看護記録・カルテ作成AI | 医療従事者向け記録支援ツール",
   "short_name": "タップカルテ",
-  "description": "看護・介護記録をAIで効率化するWebアプリ",
+  "description": "看護師・医療従事者向けAI記録作成ツール。看護記録・SOAP記録・申し送り書を自動生成。電子カルテ対応で業務効率化を実現。",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#fdf2f8",
   "theme_color": "#f472b6",
   "orientation": "portrait-primary",
-  "categories": ["medical", "productivity", "utilities"],
+  "categories": ["medical", "productivity", "utilities", "healthcare", "nursing"],
   "lang": "ja",
   "icons": [
     {
