@@ -62,7 +62,7 @@ export const APP_CONFIG = {
   /** 作者情報 */
   author: {
     name: 'タップカルテ 担当 廣谷',
-    email: 'kushiro.ai.lab@gmail.com'
+    email: 'tap.karte.ai@gmail.com'
   },
   
   /** 現在の環境 */

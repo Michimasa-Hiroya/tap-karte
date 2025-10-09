@@ -1216,6 +1216,9 @@ class AppService {
     
     // 文字制限スライダーの初期化
     this.initializeCharacterLimitSlider()
+    
+    // 選択ボタンの初期化
+    this.initializeOptionButtons()
   }
 
   /**
@@ -1232,6 +1235,65 @@ class AppService {
       })
       console.log('[AppService] Character limit slider initialized')
     }
+  }
+
+  /**
+   * 選択ボタン機能を初期化
+   */
+  initializeOptionButtons() {
+    // ドキュメント選択ボタン
+    this.initializeButtonGroup(['doc-record', 'doc-report'])
+    this.selectButton(['doc-record', 'doc-report'], 'doc-record') // デフォルト選択
+    
+    // フォーマット選択ボタン
+    this.initializeButtonGroup(['format-text', 'format-soap'])
+    this.selectButton(['format-text', 'format-soap'], 'format-text') // デフォルト選択
+    
+    // 文体選択ボタン
+    this.initializeButtonGroup(['style-plain', 'style-polite'])
+    this.selectButton(['style-plain', 'style-polite'], 'style-plain') // デフォルト選択
+    
+    console.log('[AppService] Option buttons initialized with default selections')
+  }
+
+  /**
+   * ボタングループの初期化
+   */
+  initializeButtonGroup(buttonIds) {
+    buttonIds.forEach(buttonId => {
+      const button = document.getElementById(buttonId)
+      if (button) {
+        button.addEventListener('click', () => {
+          this.selectButton(buttonIds, buttonId)
+        })
+        console.log(`[AppService] Button event listener added: ${buttonId}`)
+      } else {
+        console.error(`[AppService] Button not found: ${buttonId}`)
+      }
+    })
+  }
+
+  /**
+   * ボタンを選択状態にする
+   */
+  selectButton(groupIds, selectedId) {
+    groupIds.forEach(id => {
+      const button = document.getElementById(id)
+      if (button) {
+        // 既存のクラスをクリアして新しいクラスを設定
+        const baseClasses = 'px-4 py-2 rounded-md text-sm font-medium transition-colors'
+        
+        if (id === selectedId) {
+          // 選択状態
+          button.className = `${baseClasses} bg-pink-600 text-white hover:bg-pink-700`
+        } else {
+          // 非選択状態
+          button.className = `${baseClasses} bg-pink-100 text-pink-700 hover:bg-pink-200`
+        }
+      }
+    })
+    
+    console.log(`[AppService] Button selected: ${selectedId} in group [${groupIds.join(', ')}]`)
   }
 
   /**
