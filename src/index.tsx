@@ -212,12 +212,12 @@ const UserStatusComponent = () => (
 )
 
 /**
- * 認証モーダルコンポーネント
+ * 認証モーダルコンポーネント（レスポンシブ中央配置）
  */
 const AuthModalComponent = () => (
   <div id="auth-modal" className="hidden fixed inset-0 bg-black bg-opacity-50 z-50">
-    <div className="flex items-center justify-center min-h-screen p-4">
-      <div className="bg-white rounded-lg max-w-md w-full p-6">
+    <div className="flex items-center justify-center min-h-screen p-4 w-full">
+      <div className="bg-white rounded-lg w-full max-w-md mx-auto p-6 relative transform">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold text-pink-800">ログイン</h2>
           <button id="close-modal" className="text-gray-500 hover:text-gray-700">
@@ -226,8 +226,8 @@ const AuthModalComponent = () => (
         </div>
         
         {/* パスワード認証フォーム */}
-        <form id="login-form" className="space-y-4">
-          <div className="text-center mb-4">
+        <form id="login-form" className="space-y-4 w-full">
+          <div className="text-center mb-4 w-full">
             <i className="fas fa-lock text-4xl text-pink-500 mb-3 block"></i>
             <h3 className="text-lg font-semibold text-gray-700 mb-2">パスワードでログイン</h3>
             <p className="text-sm text-gray-500">パスワードを入力してください</p>
