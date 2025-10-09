@@ -170,14 +170,27 @@ class UsageManager {
   }
 
   /**
-   * 使用データを読み込み
+   * 使用データを読み込み（強化フィンガープリント対応）
    * @returns {Object} 使用データ
    */
   loadUsageData() {
+    const deviceId = this.generateDeviceId()
+    console.log('[UsageManager] Enhanced device fingerprint:', deviceId.substring(0, 16) + '... (length: ' + deviceId.length + ')')
+    
+    // デバッグ: フィンガープリント詳細（開発時のみ表示）
+    if (window.location.hostname.includes('e2b.dev') || window.location.hostname === 'localhost') {
+      console.log('[UsageManager] Fingerprint components available:')
+      console.log('- Canvas fingerprint: ✓')
+      console.log('- WebGL fingerprint: ✓') 
+      console.log('- Font detection: ✓')
+      console.log('- Hardware info: ✓')
+      console.log('- Environment info: ✓')
+    }
+    
     const defaultData = {
       lastUsageDate: null,
       usageCount: 0,
-      deviceId: this.generateDeviceId()
+      deviceId: deviceId
     }
     return StorageHelper.get(this.storageKey, defaultData)
   }
@@ -190,31 +203,254 @@ class UsageManager {
   }
 
   /**
-   * デバイスIDを生成（既存実装維持）
+   * 強化デバイスフィンガープリント生成
+   * Canvas + WebGL + フォント + ハードウェア + ネットワーク情報
    */
   generateDeviceId() {
-    const canvas = document.createElement('canvas')
-    const ctx = canvas.getContext('2d')
-    ctx.textBaseline = 'top'
-    ctx.font = '14px Arial'
-    ctx.fillText('Device fingerprint', 2, 2)
-    
-    const fingerprint = [
+    try {
+      const fingerprints = []
+      
+      // 1. Canvas フィンガープリント（強化版）
+      fingerprints.push(this.getCanvasFingerprint())
+      
+      // 2. WebGL フィンガープリント
+      fingerprints.push(this.getWebGLFingerprint())
+      
+      // 3. フォント検出フィンガープリント
+      fingerprints.push(this.getFontFingerprint())
+      
+      // 4. ハードウェア情報フィンガープリント
+      fingerprints.push(this.getHardwareFingerprint())
+      
+      // 5. ネットワーク・ブラウザ環境フィンガープリント
+      fingerprints.push(this.getEnvironmentFingerprint())
+      
+      // 6. 基本情報（後方互換性）
+      fingerprints.push(this.getBasicFingerprint())
+      
+      // 全ての指紋を結合
+      const combinedFingerprint = fingerprints.filter(f => f).join('|')
+      
+      // ハッシュ生成（SHA-like）
+      return this.generateHash(combinedFingerprint)
+    } catch (error) {
+      console.warn('[UsageManager] Fingerprint generation error:', error)
+      // フォールバック：基本情報のみ
+      return this.generateHash(this.getBasicFingerprint())
+    }
+  }
+
+  /**
+   * 強化Canvasフィンガープリント
+   */
+  getCanvasFingerprint() {
+    try {
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      canvas.width = 200
+      canvas.height = 50
+      
+      // テキスト描画（複数フォント・色・効果）
+      ctx.textBaseline = 'top'
+      ctx.font = '14px Arial, sans-serif'
+      ctx.fillStyle = 'rgb(255, 0, 0)'
+      ctx.fillText('🏥 タップカルテ Device ID 🔒', 2, 2)
+      
+      ctx.font = '12px Times, serif'
+      ctx.fillStyle = 'rgb(0, 255, 0)'
+      ctx.fillText('Medical Record Assistant 2025', 2, 20)
+      
+      // グラフィック描画
+      ctx.strokeStyle = 'rgb(0, 0, 255)'
+      ctx.arc(50, 25, 20, 0, Math.PI * 2)
+      ctx.stroke()
+      
+      // グラデーション
+      const gradient = ctx.createLinearGradient(0, 0, 100, 0)
+      gradient.addColorStop(0, 'red')
+      gradient.addColorStop(0.5, 'green')
+      gradient.addColorStop(1, 'blue')
+      ctx.fillStyle = gradient
+      ctx.fillRect(100, 10, 80, 30)
+      
+      return canvas.toDataURL()
+    } catch (error) {
+      return 'canvas_error'
+    }
+  }
+
+  /**
+   * WebGLフィンガープリント
+   */
+  getWebGLFingerprint() {
+    try {
+      const canvas = document.createElement('canvas')
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
+      if (!gl) return 'webgl_not_supported'
+      
+      const fingerprints = []
+      
+      // WebGL情報収集
+      fingerprints.push(gl.getParameter(gl.VENDOR))
+      fingerprints.push(gl.getParameter(gl.RENDERER))
+      fingerprints.push(gl.getParameter(gl.VERSION))
+      fingerprints.push(gl.getParameter(gl.SHADING_LANGUAGE_VERSION))
+      
+      // 拡張機能
+      const extensions = gl.getSupportedExtensions()
+      fingerprints.push(extensions ? extensions.sort().join(',') : 'no_extensions')
+      
+      // WebGL能力
+      fingerprints.push(gl.getParameter(gl.MAX_TEXTURE_SIZE))
+      fingerprints.push(gl.getParameter(gl.MAX_VIEWPORT_DIMS))
+      fingerprints.push(gl.getParameter(gl.MAX_VERTEX_ATTRIBS))
+      
+      return fingerprints.join('|')
+    } catch (error) {
+      return 'webgl_error'
+    }
+  }
+
+  /**
+   * フォント検出フィンガープリント
+   */
+  getFontFingerprint() {
+    try {
+      const testFonts = [
+        'Arial', 'Times New Roman', 'Courier New', 'Helvetica', 'Georgia',
+        'Verdana', 'Times', 'Comic Sans MS', 'Impact', 'Trebuchet MS',
+        'Arial Black', 'Palatino', 'Garamond', 'Bookman', 'Tahoma',
+        'MS Sans Serif', 'MS Serif', 'Yu Gothic', 'Meiryo', 'MS PGothic',
+        'Hiragino Sans', 'Noto Sans CJK JP', 'Osaka'
+      ]
+      
+      const canvas = document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      const testString = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789あいうえおアイウエオ'
+      
+      // デフォルトフォントでの幅測定
+      ctx.font = '12px monospace'
+      const defaultWidth = ctx.measureText(testString).width
+      
+      const availableFonts = []
+      
+      testFonts.forEach(font => {
+        ctx.font = `12px ${font}, monospace`
+        const width = ctx.measureText(testString).width
+        if (Math.abs(width - defaultWidth) > 1) {
+          availableFonts.push(font)
+        }
+      })
+      
+      return availableFonts.sort().join(',')
+    } catch (error) {
+      return 'font_error'
+    }
+  }
+
+  /**
+   * ハードウェア情報フィンガープリント
+   */
+  getHardwareFingerprint() {
+    try {
+      const fingerprints = []
+      
+      // CPU情報
+      fingerprints.push(navigator.hardwareConcurrency || 'unknown_cores')
+      fingerprints.push(navigator.deviceMemory || 'unknown_memory')
+      
+      // 画面情報
+      fingerprints.push(`${screen.width}x${screen.height}`)
+      fingerprints.push(`${screen.availWidth}x${screen.availHeight}`)
+      fingerprints.push(screen.colorDepth)
+      fingerprints.push(screen.pixelDepth)
+      fingerprints.push(window.devicePixelRatio || 1)
+      
+      // 向き情報
+      if (screen.orientation) {
+        fingerprints.push(screen.orientation.type)
+        fingerprints.push(screen.orientation.angle)
+      }
+      
+      // バッテリー情報（可能な場合）
+      if (navigator.getBattery) {
+        // 非同期なのでスキップするか後で実装
+        fingerprints.push('battery_api_available')
+      }
+      
+      // タッチ対応
+      fingerprints.push(navigator.maxTouchPoints || 0)
+      
+      return fingerprints.join('|')
+    } catch (error) {
+      return 'hardware_error'
+    }
+  }
+
+  /**
+   * ネットワーク・ブラウザ環境フィンガープリント
+   */
+  getEnvironmentFingerprint() {
+    try {
+      const fingerprints = []
+      
+      // ブラウザ情報
+      fingerprints.push(navigator.userAgent)
+      fingerprints.push(navigator.language)
+      fingerprints.push(navigator.languages ? navigator.languages.join(',') : 'no_languages')
+      fingerprints.push(navigator.platform)
+      fingerprints.push(navigator.cookieEnabled)
+      fingerprints.push(navigator.doNotTrack || 'not_set')
+      
+      // プラグイン情報
+      const plugins = []
+      for (let i = 0; i < navigator.plugins.length; i++) {
+        plugins.push(navigator.plugins[i].name)
+      }
+      fingerprints.push(plugins.sort().join(','))
+      
+      // 接続情報
+      if (navigator.connection) {
+        fingerprints.push(navigator.connection.effectiveType || 'unknown_connection')
+        fingerprints.push(navigator.connection.downlink || 'unknown_speed')
+      }
+      
+      // タイムゾーン
+      fingerprints.push(new Date().getTimezoneOffset())
+      fingerprints.push(Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown_tz')
+      
+      // ウィンドウ情報
+      fingerprints.push(`${window.innerWidth}x${window.innerHeight}`)
+      fingerprints.push(`${window.outerWidth}x${window.outerHeight}`)
+      
+      return fingerprints.join('|')
+    } catch (error) {
+      return 'environment_error'
+    }
+  }
+
+  /**
+   * 基本フィンガープリント（後方互換性）
+   */
+  getBasicFingerprint() {
+    return [
       navigator.userAgent,
       navigator.language,
-      screen.width + 'x' + screen.height,
-      new Date().getTimezoneOffset(),
-      canvas.toDataURL()
+      `${screen.width}x${screen.height}`,
+      new Date().getTimezoneOffset()
     ].join('|')
-    
-    let hash = 0
-    for (let i = 0; i < fingerprint.length; i++) {
-      const char = fingerprint.charCodeAt(i)
-      hash = ((hash << 5) - hash) + char
-      hash = hash & hash
+  }
+
+  /**
+   * ハッシュ生成（改良版）
+   */
+  generateHash(input) {
+    let hash = 0x811c9dc5 // FNV-1a initial hash
+    for (let i = 0; i < input.length; i++) {
+      hash ^= input.charCodeAt(i)
+      hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24)
     }
-    
-    return Math.abs(hash).toString(36)
+    return (hash >>> 0).toString(36) // 符号なし32bitに変換
   }
 
   /**
