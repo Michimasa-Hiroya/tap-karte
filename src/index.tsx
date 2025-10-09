@@ -590,8 +590,7 @@ const FooterComponent = () => (
  */
 const ScriptComponents = () => (
   <>
-    <script src="/static/usage-manager.js"></script>
-    <script src="/static/app-refactored.js"></script>
+    <script src="/static/app-optimized.js"></script>
   </>
 )
 

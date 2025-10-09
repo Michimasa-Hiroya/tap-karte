@@ -198,6 +198,54 @@ export interface ComponentProps {
 }
 
 // ========================================
+// 🎯 フロントエンド専用型定義
+// ========================================
+
+/** ボタンID定義 */
+export type ButtonId = 
+  | 'doc-record' | 'doc-report'
+  | 'format-text' | 'format-soap' 
+  | 'style-plain' | 'style-polite'
+
+/** ボタングループ定義 */
+export interface ButtonGroup {
+  /** グループID */
+  groupName: 'document' | 'format' | 'style'
+  /** ボタンIDの配列 */
+  buttonIds: ButtonId[]
+  /** デフォルト選択ID */
+  defaultId: ButtonId
+}
+
+/** 選択されたオプション */
+export interface SelectedOptions {
+  /** ドキュメント種別 */
+  docType: DocumentType
+  /** フォーマット種別 */
+  format: FormatType
+  /** 文体種別 */
+  style: StyleType
+}
+
+/** 使用制限データ */
+export interface UsageData {
+  /** 最終使用日（YYYY-MM-DD） */
+  lastUsageDate: string | null
+  /** 総使用回数 */
+  usageCount: number
+  /** デバイスID */
+  deviceId: string
+}
+
+/** 使用制限統計 */
+export interface UsageStats extends UsageData {
+  /** ゲスト生成可能フラグ */
+  canGuestGenerate: boolean
+  /** 今日の日付 */
+  todayDate: string
+}
+
+// ========================================
 // 🔧 ユーティリティ型
 // ========================================
 
@@ -211,3 +259,9 @@ export type DeepReadonly<T> = {
 
 /** 関数の戻り値型を取得 */
 export type ReturnTypeOf<T> = T extends (...args: any[]) => infer R ? R : never
+
+/** DOM要素型のヘルパー */
+export type HTMLElementById<T extends string> = HTMLElement & { id: T }
+
+/** イベントハンドラー型 */
+export type EventHandler<T = Event> = (event: T) => void | Promise<void>
