@@ -185,15 +185,15 @@ const UserStatusComponent = () => (
     <div id="user-status" className="hidden">
       <div className="flex items-center space-x-2">
         <div className="flex items-center space-x-1">
-          <img id="user-avatar" className="w-6 h-6 rounded-full" alt="Profile" />
-          <span id="user-name" className="text-pink-800 text-sm font-medium"></span>
+          <img id="user-avatar" className="w-5 h-5 rounded-full" alt="Profile" />
+          <span id="user-name" className="text-pink-800 text-xs font-medium truncate max-w-20"></span>
         </div>
         <button 
           id="logout-btn" 
-          className="px-2 py-1 text-pink-600 hover:text-pink-800 hover:bg-pink-50 rounded-md text-xs transition-colors"
+          className="px-1 py-1 text-pink-600 hover:text-pink-800 hover:bg-pink-50 rounded text-xs transition-colors flex items-center"
         >
-          <i className="fas fa-sign-out-alt mr-1"></i>
-          ログアウト
+          <i className="fas fa-sign-out-alt text-xs"></i>
+          <span className="ml-1 text-xs">ログアウト</span>
         </button>
       </div>
     </div>

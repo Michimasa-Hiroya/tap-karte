@@ -186,7 +186,7 @@ function extractConversionRequest(body: any): {
 
   // 新しい形式 { text, options } の場合
   if (options && typeof options === 'object') {
-    const { format: optFormat, style: optStyle, include_suggestions } = options
+    const { format: optFormat, style: optStyle, include_suggestions, charLimit: optCharLimit } = options
     
     return {
       success: true,
@@ -198,7 +198,7 @@ function extractConversionRequest(body: any): {
           include_suggestions: include_suggestions !== false,
           // 従来フォーマットへのマッピング
           docType: optFormat === 'report' ? '報告書' : '記録',
-          charLimit: AI_CONFIG.defaultCharLimit
+          charLimit: optCharLimit || AI_CONFIG.defaultCharLimit
         }
       }
     }
@@ -299,11 +299,36 @@ async function performAIConversion(
       .replace(/^medical_record\s*/i, '') // 先頭のmedical_record削除
       .replace(/\/medical_record\s*$/i, '') // 末尾の/medical_record削除
       .replace(/medical_record/gi, '') // その他のmedical_record削除
+      .replace(/\*\*\d{4}年\d{1,2}月\d{1,2}日\s+\d{1,2}時\d{1,2}分\*\*/g, '') // 日時情報削除
+      .replace(/\*\*記録者：\[.*?\]\*\*/g, '') // 記録者情報削除
+      .replace(/\*\*記録者：.*?\*\*/g, '') // 記録者情報削除（別パターン）
+      .replace(/^\d{4}年\d{1,2}月\d{1,2}日.*?\n/gm, '') // 行頭の日時削除
+      .replace(/記録者：.*?\n/gm, '') // 記録者行削除
+      .replace(/^\*+\s*/gm, '') // 行頭のアスタリスク削除
+      .replace(/〇月〇日\s+〇時〇分/g, '') // 〇月〇日 〇時〇分削除
+      .replace(/^\*+$/gm, '') // アスタリスクのみの行削除
+      .replace(/\n\s*\n/g, '\n') // 空行の除去
       .trim()
+
+    // 文字数制限を厳密に適用
+    const { charLimit } = options
+    let limitedText = cleanedText
+    if (charLimit && cleanedText.length > charLimit) {
+      // 厳密に文字数制限を適用
+      if (charLimit <= 3) {
+        limitedText = cleanedText.substring(0, charLimit)
+      } else {
+        limitedText = cleanedText.substring(0, charLimit - 1) + '。'
+        // それでも長い場合は「...」を使用
+        if (limitedText.length > charLimit) {
+          limitedText = cleanedText.substring(0, charLimit - 3) + '...'
+        }
+      }
+    }
 
     return {
       success: true,
-      result: cleanedText
+      result: limitedText
     }
 
   } catch (error) {

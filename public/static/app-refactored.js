@@ -910,6 +910,10 @@ class AppService {
       // 処理開始
       this.setConversionLoadingState(true)
       
+      // 文字制限スライダーの値を取得
+      const charLimitSlider = document.getElementById('char-limit-slider')
+      const charLimit = charLimitSlider ? parseInt(charLimitSlider.value) : 500
+
       // API呼び出し
       const response = await fetch('/api/ai/convert', {
         method: 'POST',
@@ -924,7 +928,8 @@ class AppService {
           options: {
             format: 'medical_record',
             style: 'professional',
-            include_suggestions: true
+            include_suggestions: true,
+            charLimit: charLimit
           }
         })
       })
@@ -1309,7 +1314,7 @@ class AppService {
           usageMessage.style.display = "none"
         } else {
           usageMessage.style.display = "block"
-          usageMessage.innerHTML = `<div class="flex items-center space-x-2"><i class="fas fa-clock text-red-600"></i><span class="text-sm font-semibold text-red-700">本日の無料利用回数を超えました</span></div><p class="text-sm text-red-600 mt-1">新規ユーザーは1日1回まで無料でご利用いただけます。無制限利用にはログインが必要です。</p>`
+          usageMessage.innerHTML = `<div class="flex items-center space-x-2"><i class="fas fa-clock text-red-600"></i><span class="text-sm font-semibold text-red-700">本日の利用回数を超えました</span></div><p class="text-sm text-red-600 mt-1">ゲストユーザーは1日1回まで無料でご利用いただけます。無制限利用にはログインが必要です。</p>`
         }
       }
       
@@ -1356,7 +1361,7 @@ class AppService {
    * 使用制限エラーを表示
    */
   showUsageLimitError() {
-    const errorMessage = "本日の無料利用回数を超えました。無制限利用にはログインしてください。"
+    const errorMessage = "本日の利用回数を超えました。ゲストユーザーは1日1回まで無料でご利用いただけます。無制限利用にはログインしてください。"
     alert(errorMessage)
   }
   
