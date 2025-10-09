@@ -21,10 +21,12 @@ import {
   inputValidation,
   requestLogging,
   performanceMonitoring,
+  enhancedAuth,
   optionalAuth,
   errorHandler,
   notFoundHandler,
-  rateLimit
+  rateLimit,
+  securityAnomalyDetection
 } from './middleware'
 
 // ルート
@@ -50,6 +52,7 @@ app.use(renderer)
 
 // セキュリティ関連ミドルウェア
 app.use('*', securityHeaders())
+app.use('*', securityAnomalyDetection()) // 強化された異常検知
 app.use('/api/*', corsSettings())
 app.use('/api/*', inputValidation())
 
@@ -57,8 +60,11 @@ app.use('/api/*', inputValidation())
 app.use('*', requestLogging())
 app.use('*', performanceMonitoring())
 
-// 認証ミドルウェア（オプション）
-app.use('/api/*', optionalAuth())
+// 強化された認証ミドルウェア（セッションフィンガープリンティング対応）
+app.use('/api/*', enhancedAuth())
+
+// 後方互換性のための従来認証（フォールバック）
+app.use('/api/legacy/*', optionalAuth())
 
 // レート制限（APIルートのみ）
 app.use('/api/*', rateLimit(60000, 50)) // 1分間に50リクエスト
@@ -581,7 +587,7 @@ const FooterComponent = () => (
  */
 const ScriptComponents = () => (
   <>
-    <script src="/static/app-optimized.js"></script>
+    <script type="module" src="/static/app-modular.js"></script>
   </>
 )
 

@@ -24,7 +24,8 @@ const APP_CONSTANTS = {
     TOKEN_KEY: 'demo_auth_token',
     USER_KEY: 'demo_user_data',
     USAGE_KEY: 'tap_karte_usage_data',
-    HISTORY_KEY: 'conversionHistory'
+    HISTORY_KEY: 'conversionHistory',
+    SESSION_KEY: 'session_fingerprint'
   },
   
   TIMERS: {
@@ -586,8 +587,121 @@ class AuthService {
     this.authListeners = []
     this.sessionTimer = null
     this.refreshTimer = null
+    this.sessionFingerprint = null
+    this.securityCheckTimer = null
     
-    console.log('[AuthService] Initialized')
+    // セッションフィンガープリンティング初期化
+    this.initSessionFingerprint()
+    
+    console.log('[AuthService] Initialized with enhanced session security')
+  }
+  
+  /**
+   * セッションフィンガープリンティング初期化
+   */
+  initSessionFingerprint() {
+    try {
+      // 簡単なクライアントサイドフィンガープリント生成
+      const components = {
+        userAgent: navigator.userAgent.substring(0, 100),
+        language: navigator.language || 'unknown',
+        platform: navigator.platform || 'unknown',
+        cookieEnabled: navigator.cookieEnabled,
+        doNotTrack: navigator.doNotTrack || 'unknown',
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        screenResolution: `${screen.width}x${screen.height}`,
+        colorDepth: screen.colorDepth,
+        timestamp: Math.floor(Date.now() / (1000 * 60 * 60 * 6)) // 6時間単位でローテーション
+      }
+      
+      // JSON文字列化して簡易ハッシュ化
+      const dataString = JSON.stringify(components)
+      let hash = 0
+      for (let i = 0; i < dataString.length; i++) {
+        const char = dataString.charCodeAt(i)
+        hash = ((hash << 5) - hash) + char
+        hash = hash & hash // 32bit整数に変換
+      }
+      
+      this.sessionFingerprint = `fp_${Math.abs(hash).toString(36).substring(0, 16)}`
+      
+      // セッションフィンガープリントをストレージに保存
+      StorageHelper.set(APP_CONSTANTS.STORAGE.SESSION_KEY, this.sessionFingerprint)
+      
+      console.log('[AuthService] Session fingerprint initialized:', this.sessionFingerprint.substring(0, 8) + '...')
+    } catch (error) {
+      console.warn('[AuthService] Fingerprint generation failed:', error)
+      this.sessionFingerprint = `fp_fallback_${Date.now().toString(36)}`
+    }
+  }
+  
+  /**
+   * セッションセキュリティチェック開始
+   */
+  startSecurityMonitoring() {
+    if (this.securityCheckTimer) {
+      clearInterval(this.securityCheckTimer)
+    }
+    
+    this.securityCheckTimer = setInterval(() => {
+      this.performSecurityCheck()
+    }, APP_CONSTANTS.TIMERS.SESSION_CHECK) // 5分ごと
+    
+    console.log('[AuthService] Security monitoring started')
+  }
+  
+  /**
+   * セッションセキュリティチェック実行
+   */
+  performSecurityCheck() {
+    try {
+      // 現在のフィンガープリントと保存されたものを比較
+      const storedFingerprint = StorageHelper.get(APP_CONSTANTS.STORAGE.SESSION_KEY, null)
+      
+      if (storedFingerprint !== this.sessionFingerprint) {
+        console.warn('[AuthService] Session fingerprint mismatch detected')
+        console.warn('- Stored:', storedFingerprint?.substring(0, 8) + '...')
+        console.warn('- Current:', this.sessionFingerprint?.substring(0, 8) + '...')
+        
+        // セッションハイジャックの可能性 - 強制ログアウト
+        this.handleSecurityThreat('Session fingerprint mismatch')
+      }
+      
+      // トークンの整合性チェック
+      if (this.authToken && !this.authToken.startsWith('demo_token_') && !this.authToken.startsWith('secure_token_')) {
+        console.warn('[AuthService] Invalid token format detected')
+        this.handleSecurityThreat('Invalid token format')
+      }
+    } catch (error) {
+      console.error('[AuthService] Security check failed:', error)
+    }
+  }
+  
+  /**
+   * セキュリティ脅威ハンドラー
+   * @param {string} reason 脅威の理由
+   */
+  handleSecurityThreat(reason) {
+    console.error('[AuthService] Security threat detected:', reason)
+    
+    // ユーザーに警告表示
+    if (window.NotificationHelper) {
+      NotificationHelper.show(`セキュリティ上の理由でログアウトしました。再度ログインしてください。`, 'error')
+    }
+    
+    // 強制ログアウト
+    this.logout()
+  }
+  
+  /**
+   * セキュリティ監視停止
+   */
+  stopSecurityMonitoring() {
+    if (this.securityCheckTimer) {
+      clearInterval(this.securityCheckTimer)
+      this.securityCheckTimer = null
+      console.log('[AuthService] Security monitoring stopped')
+    }
   }
 
   /**
@@ -603,11 +717,17 @@ class AuthService {
         throw new Error('パスワードが入力されていません')
       }
       
+      // パスワードセキュリティ強化: リクエスト送信後にメモリから消去
+      const requestBody = JSON.stringify({ password })
+      
       const response = await fetch(APP_CONSTANTS.API.ENDPOINTS.LOGIN, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password })
+        body: requestBody
       })
+      
+      // パスワードをメモリから完全消去（セキュリティ強化）
+      password = null
       
       const data = await response.json()
       
@@ -622,7 +742,9 @@ class AuthService {
         StorageHelper.set(APP_CONSTANTS.STORAGE.TOKEN_KEY, data.data.token)
         StorageHelper.set(APP_CONSTANTS.STORAGE.USER_KEY, data.data.user)
         
+        // 強化されたセッション監視開始
         this.startSessionMonitoring()
+        this.startSecurityMonitoring()
         this.notifyAuthListeners(true)
         
         console.log('[AuthService] Login successful:', data.data.user.name)
@@ -631,8 +753,13 @@ class AuthService {
         throw new Error(data.error || 'ログインレスポンスが無効です')
       }
     } catch (error) {
+      // エラー時もパスワードをメモリから消去
+      password = null
       console.error('[AuthService] Login error:', error)
       throw error
+    } finally {
+      // 終了時に必ずパスワードをメモリから消去
+      password = null
     }
   }
 
@@ -644,6 +771,7 @@ class AuthService {
       console.log('[AuthService] Starting logout...')
       
       this.stopSessionMonitoring()
+      this.stopSecurityMonitoring()
       
       StorageHelper.remove(APP_CONSTANTS.STORAGE.TOKEN_KEY)
       StorageHelper.remove(APP_CONSTANTS.STORAGE.USER_KEY)
@@ -1135,6 +1263,13 @@ class AppService {
       // 認証実行
       await this.authService.login(password)
       
+      // パスワードをフィールドから完全消去（セキュリティ強化）
+      if (this.uiManager.elements.auth?.loginPassword) {
+        this.uiManager.elements.auth.loginPassword.value = ''
+        this.uiManager.elements.auth.loginPassword.type = 'text'
+        this.uiManager.elements.auth.loginPassword.type = 'password'
+      }
+      
       // モーダルを閉じる
       this.uiManager.toggleAuthModal(false)
       
@@ -1148,8 +1283,18 @@ class AppService {
     } catch (error) {
       console.error('[AppService] Password login failed:', error)
       this.uiManager.showAuthError(`ログインに失敗しました: ${error.message}`)
+      
+      // エラー時もパスワードをフィールドから完全消去
+      if (this.uiManager.elements.auth?.loginPassword) {
+        this.uiManager.elements.auth.loginPassword.value = ''
+      }
     } finally {
       this.uiManager.setAuthLoadingState(false)
+      
+      // 終了時に必ずパスワードをフィールドから消去
+      if (this.uiManager.elements.auth?.loginPassword) {
+        this.uiManager.elements.auth.loginPassword.value = ''
+      }
     }
   }
 

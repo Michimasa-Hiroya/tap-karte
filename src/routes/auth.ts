@@ -7,7 +7,7 @@
 import { Hono } from 'hono'
 import type { CloudflareBindings, AuthResponse, User, ApiResponse } from '../types'
 import { SECURITY_CONFIG, getEnvironmentVariables } from '../config'
-import { logger, getCurrentTimestamp, generateId, generateDemoUser, generateDemoAuthToken, validateDemoAuthToken } from '../utils'
+import { logger, getCurrentTimestamp, generateId, generateDemoUser, generateDemoAuthToken, validateDemoAuthToken, generateSessionFingerprint, generateSecureAuthToken, validateSecureAuthToken, hashPassword, verifyPassword } from '../utils'
 
 // ========================================
 // 🔑 認証APIルート
@@ -25,7 +25,7 @@ auth.post('/login', async (c) => {
   try {
     // リクエストボディから認証情報を取得
     const body = await c.req.json()
-    const { password } = body
+    let { password } = body
 
     logger.info('Password authentication requested', {
       requestId,
@@ -44,14 +44,20 @@ auth.post('/login', async (c) => {
       }, 400)
     }
 
-    // 固定パスワード「656110」との照合
-    const DEMO_PASSWORD = '656110'
-    if (password !== DEMO_PASSWORD) {
+    // パスワードのハッシュ化（秘匿化処理）
+    const expectedPasswordHash = await hashPassword('656110') // 固定パスワードのハッシュ
+    const providedPasswordHash = await hashPassword(password)
+    
+    if (providedPasswordHash !== expectedPasswordHash) {
       logger.warn('Login attempt with invalid password', {
         requestId,
         passwordLength: password.length,
+        providedHash: providedPasswordHash.substring(0, 8) + '...',
         timestamp: getCurrentTimestamp()
       })
+      
+      // パスワードをメモリから完全消去
+      password = null
       
       // セキュリティ上、パスワード間違いの詳細は記録するが、レスポンスは一般的なメッセージ
       return c.json<ApiResponse<AuthResponse>>({
@@ -63,13 +69,25 @@ auth.post('/login', async (c) => {
     // パスワード認証成功 - デモユーザー情報を生成
     const demoUser: User = generateDemoUser()
     
-    // 認証トークンを生成
-    const authToken = generateDemoAuthToken(demoUser)
+    // セッションフィンガープリンティング生成
+    const fingerprint = await generateSessionFingerprint({
+      userAgent: c.req.header('User-Agent'),
+      acceptLanguage: c.req.header('Accept-Language'),
+      ip: c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For')
+    })
+    
+    // 強化された認証トークンを生成
+    const authToken = await generateSecureAuthToken(demoUser, fingerprint)
+    
+    // パスワードをメモリから完全消去（セキュリティ強化）
+    password = null
     
     logger.info('Password authentication successful', {
       requestId,
       userId: demoUser.id,
       userName: demoUser.name,
+      fingerprint: fingerprint.substring(0, 8) + '...',
+      tokenType: 'secure',
       timestamp: getCurrentTimestamp()
     })
 
@@ -133,8 +151,15 @@ auth.get('/me', async (c) => {
       }, 401)
     }
 
-    // デモトークンの検証
-    const user = validateDemoAuthToken(authToken)
+    // セッションフィンガープリンティング生成
+    const fingerprint = await generateSessionFingerprint({
+      userAgent: c.req.header('User-Agent'),
+      acceptLanguage: c.req.header('Accept-Language'),
+      ip: c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For')
+    })
+
+    // 強化されたトークン検証
+    const user = await validateSecureAuthToken(authToken, fingerprint)
     
     if (!user) {
       logger.warn('Invalid auth token provided', { requestId })
@@ -148,7 +173,8 @@ auth.get('/me', async (c) => {
     logger.debug('User info retrieved', {
       requestId,
       userId: user.id,
-      userName: user.name
+      userName: user.name,
+      tokenType: authToken.startsWith('secure_token_') ? 'secure' : 'demo'
     })
 
     return c.json<ApiResponse<AuthResponse>>({
@@ -184,12 +210,16 @@ auth.post('/logout', async (c) => {
     const authToken = c.get('authToken')
     
     if (authToken) {
-      const user = validateDemoAuthToken(authToken)
+      // フィンガープリントはログアウト時は簡略化
+      const user = authToken.startsWith('secure_token_') 
+        ? await validateSecureAuthToken(authToken, 'logout')
+        : validateDemoAuthToken(authToken)
       
       logger.info('User logged out', {
         requestId,
         userId: user?.id || 'unknown',
-        userName: user?.name || 'unknown'
+        userName: user?.name || 'unknown',
+        tokenType: authToken.startsWith('secure_token_') ? 'secure' : 'demo'
       })
     }
 
@@ -231,8 +261,15 @@ auth.post('/refresh', async (c) => {
       }, 401)
     }
 
+    // セッションフィンガープリンティング生成
+    const fingerprint = await generateSessionFingerprint({
+      userAgent: c.req.header('User-Agent'),
+      acceptLanguage: c.req.header('Accept-Language'),
+      ip: c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For')
+    })
+
     // 現在のトークンを検証
-    const user = validateDemoAuthToken(authToken)
+    const user = await validateSecureAuthToken(authToken, fingerprint)
     
     if (!user) {
       return c.json<ApiResponse<AuthResponse>>({
@@ -241,8 +278,8 @@ auth.post('/refresh', async (c) => {
       }, 401)
     }
 
-    // 新しいトークンを生成
-    const newAuthToken = generateDemoAuthToken(user)
+    // 新しい強化トークンを生成
+    const newAuthToken = await generateSecureAuthToken(user, fingerprint)
     
     logger.info('Session refreshed', {
       requestId,

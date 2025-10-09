@@ -7,7 +7,7 @@
 import { Context, Next } from 'hono'
 import type { CloudflareBindings, ApiError, LogEntry } from '../types'
 import { SECURITY_CONFIG, DEBUG_CONFIG } from '../config'
-import { logger, getCurrentTimestamp, detectPersonalInfo, logSecurityEvent, detectAnomalousAccess, logApiKeyUsage } from '../utils'
+import { logger, getCurrentTimestamp, detectPersonalInfo, logSecurityEvent, detectAnomalousAccess, logApiKeyUsage, generateSessionFingerprint, validateSecureAuthToken } from '../utils'
 
 // ========================================
 // 🔐 セキュリティミドルウェア
@@ -188,7 +188,54 @@ export const performanceMonitoring = () => {
 // ========================================
 
 /**
- * JWT認証ミドルウェア（オプション）
+ * 強化されたJWT認証ミドルウェア（セッションフィンガープリンティング対応）
+ */
+export const enhancedAuth = () => {
+  return async (c: Context, next: Next) => {
+    const authHeader = c.req.header('Authorization')
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7)
+      
+      try {
+        // セッションフィンガープリンティング生成
+        const fingerprint = await generateSessionFingerprint({
+          userAgent: c.req.header('User-Agent'),
+          acceptLanguage: c.req.header('Accept-Language'),
+          ip: c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For')
+        })
+        
+        // 強化されたトークン検証
+        const user = await validateSecureAuthToken(token, fingerprint)
+        
+        if (user) {
+          c.set('authToken', token)
+          c.set('authenticatedUser', user)
+          c.set('sessionFingerprint', fingerprint)
+          
+          logger.debug('Enhanced auth successful', {
+            userId: user.id,
+            fingerprint: fingerprint.substring(0, 8) + '...',
+            tokenType: token.startsWith('secure_token_') ? 'secure' : 'demo'
+          })
+        } else {
+          // 認証失敗をログに記録
+          logger.warn('Enhanced auth validation failed', {
+            tokenPrefix: token.substring(0, 10),
+            fingerprint: fingerprint.substring(0, 8) + '...'
+          })
+        }
+      } catch (error) {
+        logger.warn('Enhanced auth error', { error: (error as Error).message })
+      }
+    }
+    
+    await next()
+  }
+}
+
+/**
+ * JWT認証ミドルウェア（オプション・後方互換性）
  */
 export const optionalAuth = () => {
   return async (c: Context, next: Next) => {
@@ -347,7 +394,7 @@ export const rateLimit = (
 // ========================================
 
 /**
- * セキュリティ異常検知ミドルウェア（簡易版）
+ * セキュリティ異常検知ミドルウェア（強化版）
  */
 export const securityAnomalyDetection = () => {
   return async (c: Context, next: Next) => {
@@ -356,31 +403,45 @@ export const securityAnomalyDetection = () => {
                     'unknown'
     const userAgent = c.req.header('User-Agent') || ''
     const path = c.req.path
+    const method = c.req.method
     
-    // 基本的な異常パターンチェック
-    const suspiciousPatterns = [
-      /(<script|javascript:|onload|onerror)/i,
-      /(union|select|insert|delete|drop|exec)/i,
-      /(\.\.\/|\.\.\\|\/etc\/|\/var\/)/i
-    ]
+    // 強化された異常検知
+    const anomalyResult = detectAnomalousAccess({
+      ip: clientIp,
+      userAgent,
+      path,
+      method
+    })
     
-    const isSuspicious = suspiciousPatterns.some(pattern => 
-      pattern.test(path) || pattern.test(userAgent)
-    )
-    
-    if (isSuspicious) {
-      logger.warn('Suspicious request detected', {
-        clientIp,
+    if (anomalyResult.isAnomalous) {
+      logger.warn('Security anomaly detected', {
+        clientIp: clientIp.substring(0, 10) + '...',
         path,
-        userAgent: userAgent.substring(0, 100)
+        method,
+        riskLevel: anomalyResult.riskLevel,
+        reasons: anomalyResult.reasons,
+        userAgent: userAgent.substring(0, 50) + '...',
+        timestamp: getCurrentTimestamp()
       })
       
-      // 明らかに悪意のあるリクエストはブロック
-      if (path.includes('<script') || path.includes('javascript:')) {
+      // 高リスクアクセスはブロック
+      if (anomalyResult.riskLevel === 'high') {
+        logSecurityEvent('High Risk Request Blocked', 'high', {
+          clientIp: clientIp.substring(0, 10) + '...',
+          path,
+          method,
+          reasons: anomalyResult.reasons
+        })
+        
         return c.json({
           success: false,
-          error: 'セキュリティ上の理由によりリクエストが拒否されました'
+          error: 'セキュリティ上の理由によりアクセスが制限されました'
         }, 403)
+      }
+      
+      // 中リスクアクセスは警告のみ
+      if (anomalyResult.riskLevel === 'medium') {
+        c.header('X-Security-Warning', 'Medium risk access detected')
       }
     }
     

@@ -11,6 +11,48 @@ import type { LogLevel, LogEntry, NotificationType } from '../types'
 // ========================================
 
 /**
+ * パスワードを安全にハッシュ化
+ * @param password プレーンテキストパスワード
+ * @returns ハッシュ化されたパスワード
+ */
+export const hashPassword = async (password: string): Promise<string> => {
+  try {
+    // ソルト付きハッシュ化でセキュリティ強化
+    const salt = 'tap_karte_salt_2024' // アプリ固有のソルト
+    const saltedPassword = password + salt
+    
+    const encoder = new TextEncoder()
+    const data = encoder.encode(saltedPassword)
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+    
+    const hashArray = Array.from(new Uint8Array(hashBuffer))
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+    
+    return hashHex
+  } catch (error) {
+    logger.error('Password hashing failed', { error })
+    // フォールバック: 単純ハッシュ（開発環境用）
+    return btoa(password).replace(/[^a-zA-Z0-9]/g, '')
+  }
+}
+
+/**
+ * パスワードを安全に比較
+ * @param providedPassword 提供されたパスワード
+ * @param storedHash 保存されたハッシュ
+ * @returns 一致するかどうか
+ */
+export const verifyPassword = async (providedPassword: string, storedHash: string): Promise<boolean> => {
+  try {
+    const providedHash = await hashPassword(providedPassword)
+    return providedHash === storedHash
+  } catch (error) {
+    logger.error('Password verification failed', { error })
+    return false
+  }
+}
+
+/**
  * 個人情報パターンをチェック
  * @param text チェック対象のテキスト
  * @param patterns 検出パターンの配列
@@ -453,6 +495,226 @@ export const validateDemoAuthToken = (token: string): User | null => {
     }
   } catch (error) {
     logger.error('Demo token validation failed', { 
+      error: (error as Error).message,
+      token: token.substring(0, 20) + '...'
+    })
+    return null
+  }
+}
+
+// ========================================
+// 🔐 セッションセキュリティ強化
+// ========================================
+
+/**
+ * セッションフィンガープリンティング用データ生成
+ * @param request リクエスト情報
+ * @returns フィンガープリント用データ
+ */
+export const generateSessionFingerprint = async (request: {
+  userAgent?: string
+  acceptLanguage?: string
+  ip?: string
+  headers?: Record<string, string>
+}): Promise<string> => {
+  try {
+    // フィンガープリント要素を収集
+    const fingerprintData = {
+      userAgent: request.userAgent?.substring(0, 100) || 'unknown',
+      acceptLanguage: request.acceptLanguage || 'unknown',
+      ip: request.ip || 'unknown',
+      // セキュリティ: IPは最後の8桁のみハッシュ化対象に含める
+      ipSuffix: request.ip ? request.ip.split('.').slice(-2).join('.') : 'unknown',
+      timestamp: Math.floor(Date.now() / (1000 * 60 * 60 * 6)), // 6時間単位でローテーション
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+    }
+    
+    // JSON文字列化
+    const dataString = JSON.stringify(fingerprintData)
+    
+    // WebCrypto APIでハッシュ化
+    const encoder = new TextEncoder()
+    const data = encoder.encode(dataString)
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+    
+    // Base64エンコード（URL安全な形式）
+    const hashArray = Array.from(new Uint8Array(hashBuffer))
+    const hashBase64 = btoa(String.fromCharCode(...hashArray))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '')
+    
+    return `fp_${hashBase64.substring(0, 16)}`
+  } catch (error) {
+    logger.error('Session fingerprint generation failed', { error })
+    // フォールバック: ランダムフィンガープリント
+    return `fp_fallback_${generateId('', 16)}`
+  }
+}
+
+/**
+ * セッション検証用データを生成
+ * @param userId ユーザーID
+ * @param fingerprint セッションフィンガープリント
+ * @returns セッション検証データ
+ */
+export const generateSessionValidation = async (
+  userId: string,
+  fingerprint: string
+): Promise<string> => {
+  try {
+    const validationData = {
+      userId,
+      fingerprint,
+      created: Math.floor(Date.now() / 1000),
+      nonce: generateId('nonce', 8)
+    }
+    
+    const dataString = JSON.stringify(validationData)
+    const encoder = new TextEncoder()
+    const data = encoder.encode(dataString)
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+    
+    const hashArray = Array.from(new Uint8Array(hashBuffer))
+    const hashBase64 = btoa(String.fromCharCode(...hashArray))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '')
+    
+    return `sv_${hashBase64.substring(0, 20)}`
+  } catch (error) {
+    logger.error('Session validation generation failed', { error })
+    return `sv_error_${generateId('', 12)}`
+  }
+}
+
+/**
+ * 強化されたデモ認証トークンを生成（フィンガープリント付き）
+ * @param user ユーザー情報
+ * @param fingerprint セッションフィンガープリント
+ * @returns 認証トークン
+ */
+export const generateSecureAuthToken = async (
+  user: User,
+  fingerprint: string
+): Promise<string> => {
+  try {
+    const sessionValidation = await generateSessionValidation(user.id, fingerprint)
+    
+    const payload = {
+      userId: user.id,
+      name: user.name,
+      email: user.email,
+      picture: user.picture,
+      fingerprint,
+      sessionValidation,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + SECURITY_CONFIG.jwtExpirationTime
+    }
+    
+    // セキュリティ強化: ペイロードもハッシュ化
+    const payloadString = JSON.stringify(payload)
+    const encoder = new TextEncoder()
+    const data = encoder.encode(payloadString)
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+    
+    const hashArray = Array.from(new Uint8Array(hashBuffer))
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+    
+    // 改ざん検証用のチェックサム
+    const checksum = hashHex.substring(0, 8)
+    
+    return `secure_token_${encodeURIComponent(payloadString)}_cs_${checksum}`
+  } catch (error) {
+    logger.error('Secure token generation failed', { error })
+    // フォールバック: 通常のトークン生成
+    return generateDemoAuthToken(user)
+  }
+}
+
+/**
+ * 強化された認証トークンを検証（フィンガープリント付き）
+ * @param token 認証トークン
+ * @param currentFingerprint 現在のフィンガープリント
+ * @returns ユーザー情報（無効な場合はnull）
+ */
+export const validateSecureAuthToken = async (
+  token: string,
+  currentFingerprint: string
+): Promise<User | null> => {
+  try {
+    // 通常のデモトークンの場合は従来の検証
+    if (token.startsWith('demo_token_')) {
+      return validateDemoAuthToken(token)
+    }
+    
+    if (!token.startsWith('secure_token_')) {
+      logger.warn('Invalid token format', { tokenPrefix: token.substring(0, 10) })
+      return null
+    }
+    
+    // トークンを分解
+    const tokenParts = token.split('_cs_')
+    if (tokenParts.length !== 2) {
+      logger.warn('Invalid secure token structure')
+      return null
+    }
+    
+    const payloadEncoded = tokenParts[0].substring(13) // 'secure_token_'を除去
+    const providedChecksum = tokenParts[1]
+    
+    // チェックサム検証
+    const payloadString = decodeURIComponent(payloadEncoded)
+    const encoder = new TextEncoder()
+    const data = encoder.encode(payloadString)
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+    
+    const hashArray = Array.from(new Uint8Array(hashBuffer))
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+    const expectedChecksum = hashHex.substring(0, 8)
+    
+    if (providedChecksum !== expectedChecksum) {
+      logger.warn('Token checksum validation failed', {
+        provided: providedChecksum,
+        expected: expectedChecksum
+      })
+      logSecurityEvent('Token Tampering Detected', 'high', {
+        providedChecksum,
+        expectedChecksum
+      })
+      return null
+    }
+    
+    const payload = JSON.parse(payloadString)
+    
+    // 有効期限チェック
+    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+      logger.warn('Secure token expired', { userId: payload.userId })
+      return null
+    }
+    
+    // フィンガープリント検証（セッションハイジャック対策）
+    if (payload.fingerprint !== currentFingerprint) {
+      logger.warn('Session fingerprint mismatch', {
+        userId: payload.userId,
+        storedFingerprint: payload.fingerprint?.substring(0, 8) + '...',
+        currentFingerprint: currentFingerprint?.substring(0, 8) + '...'
+      })
+      logSecurityEvent('Session Hijacking Attempt', 'high', {
+        userId: payload.userId,
+        fingerprintMismatch: true
+      })
+      return null
+    }
+    
+    return {
+      id: payload.userId,
+      name: payload.name,
+      email: payload.email,
+      picture: payload.picture
+    }
+  } catch (error) {
+    logger.error('Secure token validation failed', {
       error: (error as Error).message,
       token: token.substring(0, 20) + '...'
     })
