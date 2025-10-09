@@ -531,7 +531,7 @@ const UsageGuideComponent = () => (
   <div className="mt-8 bg-pink-50 rounded-lg p-6 border border-pink-200">
     <h2 className="text-xl font-semibold text-pink-900 mb-4 flex items-center">
       <i className="fas fa-clipboard-list text-pink-600 mr-2"></i>
-      看護記録・カルテ作成AIの使い方
+      タップカルテの使い方
     </h2>
     
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -540,22 +540,13 @@ const UsageGuideComponent = () => (
           📝 看護記録作成の手順
         </h3>
         <ol className="list-decimal list-inside space-y-2 text-pink-700 leading-relaxed">
-          <li><strong>患者観察</strong>や<strong>看護ケア</strong>の内容を自然な文章で入力</li>
+          <li><strong>利用者の観察</strong>や<strong>看護ケア</strong>の内容を自然な文章で入力</li>
           <li>「生成」ボタンで専門的な<strong>看護記録</strong>が自動作成</li>
-          <li><strong>電子カルテシステム</strong>にコピー＆ペーストで即座に記録</li>
+          <li>コピー＆ペーストで即座に記録</li>
         </ol>
       </div>
       
-      <div className="space-y-3">
-        <h3 className="text-lg font-semibold text-pink-800 border-b border-pink-300 pb-1">
-          📋 報告書・申し送り作成
-        </h3>
-        <ol className="list-decimal list-inside space-y-2 text-pink-700 leading-relaxed">
-          <li><strong>申し送り事項</strong>や<strong>患者情報</strong>をメモ感覚で入力</li>
-          <li>SOAP形式や文章形式など、<strong>医療記録</strong>の標準フォーマットを選択</li>
-          <li>病院・施設の<strong>看護業務</strong>に応じた文体で自動整形</li>
-        </ol>
-      </div>
+
     </div>
     
     <div className="bg-white rounded-lg p-4 border-l-4 border-pink-500 shadow-sm">
@@ -567,10 +558,10 @@ const UsageGuideComponent = () => (
           <h4 className="font-semibold mb-2">✅ 対応する医療記録</h4>
           <ul className="space-y-1">
             <li>• 日常的な<strong>看護記録</strong></li>
-            <li>• <strong>患者観察記録</strong></li>
-            <li>• <strong>看護計画書</strong></li>
+            <li>• <strong>利用者の観察記録</strong></li>
+            <li>• <strong>報告書</strong></li>
             <li>• <strong>申し送り書</strong></li>
-            <li>• <strong>インシデントレポート</strong></li>
+            <li>• <strong>インシデントレポート</strong>など</li>
           </ul>
         </div>
         <div>
@@ -580,7 +571,6 @@ const UsageGuideComponent = () => (
             <li>• <strong>医療用語</strong>の自動変換</li>
             <li>• 標準的な<strong>看護記録形式</strong>で出力</li>
             <li>• <strong>誤字脱字</strong>の心配不要</li>
-            <li>• <strong>夜勤</strong>・<strong>日勤</strong>問わず24時間利用可能</li>
           </ul>
         </div>
       </div>
@@ -620,13 +610,6 @@ const FeaturesComponent = () => (
         />
         
         <FeatureCardComponent 
-          icon="fas fa-hospital"
-          title="電子カルテ連携"
-          description="各種電子カルテシステムに対応したフォーマットで出力。コピー＆ペーストで即座に記録入力が完了。"
-          keywords="電子カルテ, EHR, 医療記録システム, 病院システム"
-        />
-        
-        <FeatureCardComponent 
           icon="fas fa-shield-alt"
           title="医療情報保護"
           description="HIPAA準拠のセキュリティ設計。患者情報の自動検出・ブロック機能により、個人情報漏洩リスクを完全に排除。"
@@ -638,13 +621,6 @@ const FeaturesComponent = () => (
           title="24時間対応"
           description="夜勤・日勤を問わず24時間利用可能。クラウドベースのAI技術により、いつでもどこでも高品質な記録作成をサポート。"
           keywords="24時間対応, 夜勤対応, クラウドAI, 看護業務支援"
-        />
-        
-        <FeatureCardComponent 
-          icon="fas fa-users"
-          title="多職種対応"
-          description="看護師・准看護師・介護士・医師など、医療・介護現場の全職種に対応した記録作成支援機能を提供。"
-          keywords="看護師, 准看護師, 介護士, 医師, 多職種連携"
         />
       </div>
     </div>
@@ -704,11 +680,6 @@ const BenefitsComponent = () => (
               description="記録ミス・誤字脱字の削減"
               detail="AI校正機能により記録品質が大幅向上"
             />
-            <BenefitItemComponent 
-              percentage="60%"
-              description="夜勤業務負担の軽減"
-              detail="深夜帯の記録作業効率が大幅改善"
-            />
           </div>
         </div>
         
@@ -730,9 +701,7 @@ const BenefitsComponent = () => (
               <h4 className="font-semibold text-pink-800 mb-2">対象職種</h4>
               <ul className="space-y-1 text-pink-700">
                 <li>• 正看護師・准看護師</li>
-                <li>• 介護福祉士・ヘルパー</li>
                 <li>• 理学療法士・作業療法士</li>
-                <li>• 医師・歯科医師</li>
               </ul>
             </div>
           </div>
