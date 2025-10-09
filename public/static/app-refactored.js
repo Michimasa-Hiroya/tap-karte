@@ -590,66 +590,50 @@ class AuthComponent {
    * @param {Object} user ユーザー情報
    */
   showAuthenticatedUI(user) {
-    // ログインボタンを非表示
-    if (this.elements.loginBtn) {
-      this.elements.loginBtn.style.display = 'none'
+    // 認証ボタンエリアを非表示
+    if (this.elements.authButtons) {
+      this.elements.authButtons.style.display = 'none'
     }
     
     // ユーザー情報を表示
-    if (this.elements.userInfo) {
-      this.elements.userInfo.style.display = 'flex'
+    if (this.elements.userStatus) {
+      this.elements.userStatus.style.display = 'block'
     }
     
     // ユーザー名を設定
     if (this.elements.userName) {
       this.elements.userName.textContent = user.name
     }
-    if (this.elements.headerUserName) {
-      this.elements.headerUserName.textContent = user.name
-    }
     
     // ユーザー画像を設定
-    if (user.picture) {
-      if (this.elements.userPicture) {
-        this.elements.userPicture.src = user.picture
-        this.elements.userPicture.style.display = 'block'
-      }
-      if (this.elements.headerUserPicture) {
-        this.elements.headerUserPicture.src = user.picture
-        this.elements.headerUserPicture.style.display = 'block'
-      }
+    if (user.picture && this.elements.userAvatar) {
+      this.elements.userAvatar.src = user.picture
+      this.elements.userAvatar.style.display = 'block'
     }
     
-    // ヘッダーのユーザー情報を表示
-    if (this.elements.headerUserInfo) {
-      this.elements.headerUserInfo.style.display = 'flex'
-    }
-    
-    // 生成ボタン制御はAppService.updateUsageLimitsに委譲
-    // this.enableGenerationButton()
+    console.log('[AuthComponent] Authenticated UI displayed for:', user.name)
   }
 
   /**
    * 未認証UI表示
    */
   showUnauthenticatedUI() {
+    // 認証ボタンエリアを表示
+    if (this.elements.authButtons) {
+      this.elements.authButtons.style.display = 'block'
+    }
+    
     // ログインボタンを表示
     if (this.elements.loginBtn) {
       this.elements.loginBtn.style.display = 'inline-flex'
     }
     
     // ユーザー情報を非表示
-    if (this.elements.userInfo) {
-      this.elements.userInfo.style.display = 'none'
+    if (this.elements.userStatus) {
+      this.elements.userStatus.style.display = 'none'
     }
     
-    // ヘッダーのユーザー情報を非表示
-    if (this.elements.headerUserInfo) {
-      this.elements.headerUserInfo.style.display = 'none'
-    }
-    
-    // 生成ボタン制御はAppService.updateUsageLimitsに委譲
-    // this.disableGenerationButton()
+    console.log('[AuthComponent] Unauthenticated UI displayed')
   }
 
   // ========================================
@@ -1005,44 +989,32 @@ class AppService {
    * @param {Object} result 変換結果
    */
   displayConversionResult(result) {
-    const resultContainer = document.getElementById('conversionResult')
-    if (!resultContainer) return
+    const outputText = document.getElementById('output-text')
+    const outputCount = document.getElementById('output-count')
     
-    const resultHtml = `
-      <div class="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
-        <div class="flex justify-between items-start mb-4">
-          <h3 class="text-lg font-semibold text-gray-800">変換結果</h3>
-          <button onclick="app.copyResult('${result.converted_text}')" 
-                  class="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition-colors">
-            <i class="fas fa-copy mr-1"></i>コピー
-          </button>
-        </div>
-        
-        <div class="mb-4">
-          <textarea class="w-full p-3 border rounded-lg bg-gray-50" 
-                    rows="6" readonly>${result.converted_text}</textarea>
-        </div>
-        
-        ${result.suggestions && result.suggestions.length > 0 ? `
-          <div class="mt-4">
-            <h4 class="text-md font-medium text-gray-700 mb-2">提案・改善点</h4>
-            <ul class="list-disc list-inside space-y-1 text-sm text-gray-600">
-              ${result.suggestions.map(suggestion => `<li>${suggestion}</li>`).join('')}
-            </ul>
-          </div>
-        ` : ''}
-        
-        <div class="mt-4 text-xs text-gray-500">
-          変換時刻: ${new Date().toLocaleString('ja-JP')}
-        </div>
-      </div>
-    `
+    if (!outputText) {
+      console.error('[AppService] Output text element not found')
+      return
+    }
     
-    resultContainer.innerHTML = resultHtml
-    resultContainer.style.display = 'block'
+    const convertedText = result.converted_text || '変換結果が空です'
     
-    // 結果までスクロール
-    resultContainer.scrollIntoView({ behavior: 'smooth' })
+    // 出力エリアに結果を表示
+    outputText.innerHTML = convertedText.replace(/\n/g, '<br>')
+    
+    // 文字数を更新
+    if (outputCount) {
+      outputCount.textContent = `${convertedText.length}文字`
+    }
+    
+    // コピーボタンを有効化
+    const copyBtn = document.getElementById('copy-btn')
+    if (copyBtn) {
+      copyBtn.disabled = false
+      copyBtn.onclick = () => this.copyResult(convertedText)
+    }
+    
+    console.log('[AppService] Conversion result displayed:', convertedText.length, 'characters')
   }
 
   /**
