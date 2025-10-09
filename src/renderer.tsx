@@ -44,7 +44,18 @@ export const renderer = jsxRenderer(({ children }) => {
         {/* 🔗 Canonical URL */}
         <link rel="canonical" href="https://tap-karte.com" />
         
-        {/* 📊 Google Analytics & Search Console 準備 */}
+        {/* 📊 Google Analytics 4 (GA4) */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-VZDPSVT9XS"></script>
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-VZDPSVT9XS');
+          `
+        }} />
+        
+        {/* 📊 Google Search Console & Bing */}
         <meta name="google-site-verification" content="YOUR_GOOGLE_SEARCH_CONSOLE_VERIFICATION_CODE" />
         <meta name="msvalidate.01" content="YOUR_BING_VERIFICATION_CODE" />
         
@@ -52,7 +63,7 @@ export const renderer = jsxRenderer(({ children }) => {
         <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
         
         {/* 🔒 セキュリティ強化メタタグ */}
-        <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://static.cloudflareinsights.com https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' https: data:; font-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https: https://www.google-analytics.com; object-src 'none'; base-uri 'self'; form-action 'self';" />
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://static.cloudflareinsights.com https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' https: data: https://www.google-analytics.com; font-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https: https://www.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net; object-src 'none'; base-uri 'self'; form-action 'self';" />
         <meta http-equiv="X-Content-Type-Options" content="nosniff" />
         <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
         <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
