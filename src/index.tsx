@@ -419,6 +419,7 @@ const InputAreaComponent = () => (
       ></textarea>
     </div>
     
+    {/* 使用制限・認証メッセージ（入力欄と生成ボタンの間に配置） */}
     {/* 認証必須メッセージ */}
     <div id="auth-required-message" className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
       <div className="flex items-center space-x-2">
@@ -430,8 +431,8 @@ const InputAreaComponent = () => (
       </p>
     </div>
     
-    {/* 使用制限メッセージ */}
-    <div id="usage-limit-message" className="mb-3 p-3 bg-red-50 border border-red-200 rounded-md hidden">
+    {/* 使用制限メッセージ - より目立つように改良 */}
+    <div id="usage-limit-message" className="mb-4 p-4 bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-lg shadow-sm hidden">
       {/* 動的に内容が更新されます */}
     </div>
     
@@ -464,12 +465,8 @@ const SecurityWarningComponent = () => (
       <i className="fas fa-exclamation-triangle text-red-500"></i>
       <span className="text-sm font-semibold text-red-700">注意</span>
     </div>
-    <div className="text-sm text-red-600 mt-1 space-y-1">
+    <div className="text-sm text-red-600 mt-1">
       <p>個人情報(氏名や住所など)や個人が特定できる情報、珍しい病名などの入力は禁止します。</p>
-      <p className="pt-1 border-t border-red-300">
-        <i className="fas fa-info-circle mr-1"></i>
-        <strong>利用制限:</strong> 新規ユーザーは1日1回まで無料利用可能、ログインユーザーは無制限利用できます。
-      </p>
     </div>
   </div>
 )

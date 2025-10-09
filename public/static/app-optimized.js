@@ -1356,7 +1356,24 @@ class AppService {
           usageMessage.style.display = "none"
         } else {
           usageMessage.style.display = "block"
-          usageMessage.innerHTML = `<div class="flex items-center space-x-2"><i class="fas fa-clock text-red-600"></i><span class="text-sm font-semibold text-red-700">本日の利用回数を超えました</span></div><p class="text-sm text-red-600 mt-1">ゲストユーザーは1日1回まで無料でご利用いただけます。無制限利用にはログインが必要です。</p>`
+          usageMessage.innerHTML = `
+            <div class="flex items-center justify-center space-x-3 mb-3">
+              <div class="flex items-center space-x-2">
+                <i class="fas fa-clock text-red-600 text-lg"></i>
+                <span class="text-base font-bold text-red-700">本日の利用回数を超えました</span>
+              </div>
+            </div>
+            <div class="text-center">
+              <p class="text-sm text-red-600 mb-2">
+                <i class="fas fa-info-circle mr-1"></i>
+                <strong>利用制限:</strong> 新規ユーザーは1日1回まで無料利用可能
+              </p>
+              <p class="text-sm text-orange-600 font-medium">
+                <i class="fas fa-key mr-1"></i>
+                ログインすると<strong>無制限</strong>でご利用いただけます
+              </p>
+            </div>
+          `
         }
       }
       
@@ -1388,7 +1405,7 @@ class AppService {
    * 使用制限エラー表示
    */
   showUsageLimitError() {
-    const errorMessage = "本日の利用回数を超えました。ゲストユーザーは1日1回まで無料でご利用いただけます。無制限利用にはログインしてください。"
+    const errorMessage = "本日の利用回数を超えました。\n\n利用制限: 新規ユーザーは1日1回まで無料利用可能\nログインすると無制限でご利用いただけます。"
     alert(errorMessage)
   }
   
