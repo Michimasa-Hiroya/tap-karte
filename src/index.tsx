@@ -478,9 +478,17 @@ const OutputAreaComponent = () => (
     </div>
     
     <div className="flex justify-between items-center">
-      <div id="loading" className="hidden flex items-center space-x-2 text-pink-600">
-        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-pink-600"></div>
-        <span>処理中...</span>
+      <div className="flex items-center space-x-2">
+        <div id="loading" className="hidden flex items-center space-x-2 text-pink-600">
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-pink-600"></div>
+          <span>処理中...</span>
+        </div>
+        <button 
+          id="clear-output" 
+          className="px-4 py-2 bg-pink-400 text-white rounded-lg hover:bg-pink-500 transition-colors"
+        >
+          クリア
+        </button>
       </div>
       <button 
         id="copy-btn" 

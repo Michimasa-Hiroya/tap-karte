@@ -826,6 +826,7 @@ class UIManager {
       outputText: DOM.get('output-text'),
       generateBtn: DOM.get('generate-btn'),
       clearBtn: DOM.get('clear-input'),
+      clearOutputBtn: DOM.get('clear-output'),
       copyBtn: DOM.get('copy-btn'),
       inputCount: DOM.get('input-count'),
       outputCount: DOM.get('output-count'),
@@ -1263,9 +1264,9 @@ class AppService {
           user: this.authService.getCurrentUser()
         })
         
-        // フォームクリア
-        textInput.value = ''
-        this.updateCharacterCount()
+        // 入力内容は変換後も保持（ユーザーが手動でクリアする）
+        // textInput.value = '' // 削除：自動クリアしない
+        // this.updateCharacterCount() // 入力内容が残るので文字数カウントは不要
         
         console.log('[AppService] AI conversion completed successfully')
       } else {
@@ -1508,11 +1509,19 @@ class AppService {
    * その他UI要素初期化
    */
   initializeOtherElements() {
-    // クリアボタン
+    // 入力クリアボタン
     const clearBtn = this.uiManager.elements.conversion?.clearBtn
     if (clearBtn) {
       clearBtn.addEventListener('click', () => {
         this.clearInput()
+      })
+    }
+    
+    // 出力クリアボタン
+    const clearOutputBtn = this.uiManager.elements.conversion?.clearOutputBtn
+    if (clearOutputBtn) {
+      clearOutputBtn.addEventListener('click', () => {
+        this.clearOutput()
       })
     }
     
@@ -1611,6 +1620,32 @@ class AppService {
       textInput.value = ''
       this.updateCharacterCount()
       textInput.focus()
+    }
+  }
+
+  /**
+   * 出力クリア（確認ダイアログ付き）
+   */
+  clearOutput() {
+    const outputText = this.uiManager.elements.conversion?.outputText
+    const outputCount = this.uiManager.elements.conversion?.outputCount
+    const copyBtn = this.uiManager.elements.conversion?.copyBtn
+
+    if (outputText && outputText.textContent.trim() && 
+        !outputText.textContent.includes('生成された文章がここに表示されます')) {
+      // 出力内容がある場合のみ確認ダイアログを表示
+      const confirmed = confirm('出力内容をクリアしますか？')
+      if (confirmed) {
+        outputText.innerHTML = '<div class="text-pink-400 italic">生成された文章がここに表示されます...</div>'
+        if (outputCount) outputCount.textContent = '0文字'
+        if (copyBtn) copyBtn.disabled = true
+        console.log('[AppService] Output cleared by user confirmation')
+      }
+    } else if (outputText) {
+      // 出力内容が空の場合はそのままクリア
+      outputText.innerHTML = '<div class="text-pink-400 italic">生成された文章がここに表示されます...</div>'
+      if (outputCount) outputCount.textContent = '0文字'
+      if (copyBtn) copyBtn.disabled = true
     }
   }
 
