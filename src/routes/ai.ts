@@ -293,9 +293,17 @@ async function performAIConversion(
       }
     }
 
+    // 不要な英文やフォーマット文字列を除去
+    const cleanedText = convertedText
+      .trim()
+      .replace(/^medical_record\s*/i, '') // 先頭のmedical_record削除
+      .replace(/\/medical_record\s*$/i, '') // 末尾の/medical_record削除
+      .replace(/medical_record/gi, '') // その他のmedical_record削除
+      .trim()
+
     return {
       success: true,
-      result: convertedText.trim()
+      result: cleanedText
     }
 
   } catch (error) {
@@ -435,7 +443,7 @@ ${inputText.substring(0, 100)}${inputText.length > 100 ? '...' : ''}
 ・必要に応じて医師への報告を検討
 ・患者の状態変化に応じたケア計画の見直し
 
-看護師: デモユーザー
+看護師: ログインユーザー
 
 ※これはデモ機能です。実際のAI変換機能を利用するには、管理者による環境設定が必要です。`
 }

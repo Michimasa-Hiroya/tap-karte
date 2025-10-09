@@ -1208,6 +1208,25 @@ class AppService {
       })
       console.log('[AppService] Clear button initialized')
     }
+    
+    // 文字制限スライダーの初期化
+    this.initializeCharacterLimitSlider()
+  }
+
+  /**
+   * 文字制限スライダーを初期化
+   */
+  initializeCharacterLimitSlider() {
+    const slider = document.getElementById('char-limit-slider')
+    const display = document.getElementById('char-limit-display')
+    
+    if (slider && display) {
+      slider.addEventListener('input', (e) => {
+        const value = e.target.value
+        display.textContent = `${value}文字`
+      })
+      console.log('[AppService] Character limit slider initialized')
+    }
   }
 
   /**

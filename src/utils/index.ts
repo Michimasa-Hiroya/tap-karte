@@ -408,7 +408,7 @@ export const generateDemoUser = (): User => {
       picture: 'https://page.gensparksite.com/v1/base64_upload/e0e0839ca795c5577a86e6b90d5285a3'
     },
     {
-      name: '高橋 由美',
+      name: 'ログインユーザー',
       email: 'demo.nurse03@example.com',
       picture: 'https://page.gensparksite.com/v1/base64_upload/e0e0839ca795c5577a86e6b90d5285a3'
     }
