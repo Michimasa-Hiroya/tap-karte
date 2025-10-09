@@ -1202,6 +1202,135 @@ class AppService {
       currentUser: this.authService.getCurrentUser(),
       initialized: this.state.initialized
     }
+
+  }
+  // ========================================
+  // 📊 使用制限システム
+  // ========================================
+  
+  /**
+   * 使用制限システムを初期化
+   */
+  initializeUsageControl() {
+    if (!this.usageManager) {
+      console.warn("[AppService] UsageManager not available")
+      return
+    }
+    
+    // 認証状態変更時の使用制限更新
+    this.authService.addAuthListener((isAuthenticated) => {
+      this.updateUsageLimits(isAuthenticated)
+    })
+    
+    // 初期状態の使用制限を設定
+    this.updateUsageLimits(this.authService.isAuthenticated())
+    
+    console.log("[AppService] Usage control initialized")
+  }
+  
+  /**
+   * 使用制限の状態を更新
+   * @param {boolean} isAuthenticated ログイン状態
+   */
+  updateUsageLimits(isAuthenticated) {
+    const generateBtn = document.getElementById("generate-btn")
+    const authMessage = document.getElementById("auth-required-message")
+    const usageMessage = this.getOrCreateUsageLimitMessage()
+    
+    if (isAuthenticated) {
+      // ログインユーザー: 無制限
+      if (generateBtn) {
+        generateBtn.disabled = false
+        generateBtn.classList.remove("opacity-50", "cursor-not-allowed")
+        generateBtn.classList.add("hover:bg-pink-700")
+      }
+      if (authMessage) authMessage.style.display = "none"
+      if (usageMessage) usageMessage.style.display = "none"
+      
+      console.log("[AppService] Unlimited access enabled for authenticated user")
+      
+    } else {
+      // 非ログインユーザー: 1日1回制限
+      const canGenerate = this.usageManager.canGuestGenerate()
+      
+      if (generateBtn) {
+        generateBtn.disabled = !canGenerate
+        if (canGenerate) {
+          generateBtn.classList.remove("opacity-50", "cursor-not-allowed")
+          generateBtn.classList.add("hover:bg-pink-700")
+        } else {
+          generateBtn.classList.add("opacity-50", "cursor-not-allowed")
+          generateBtn.classList.remove("hover:bg-pink-700")
+        }
+      }
+      
+      if (authMessage) authMessage.style.display = "none"
+      
+      if (usageMessage) {
+        if (canGenerate) {
+          usageMessage.style.display = "none"
+        } else {
+          usageMessage.style.display = "block"
+          usageMessage.innerHTML = `<div class="flex items-center space-x-2"><i class="fas fa-clock text-red-600"></i><span class="text-sm font-semibold text-red-700">本日の無料利用回数を超えました</span></div><p class="text-sm text-red-600 mt-1">新規ユーザーは1日1回まで無料でご利用いただけます。無制限利用にはログインが必要です。</p>`
+        }
+      }
+      
+      console.log("[AppService] Guest usage limits updated:", { canGenerate })
+    }
+  }
+  
+  /**
+   * 使用制限メッセージ要素を取得または作成
+   * @returns {HTMLElement} 使用制限メッセージ要素
+   */
+  getOrCreateUsageLimitMessage() {
+    return document.getElementById("usage-limit-message")
+  }
+  
+  /**
+   * 生成実行時の使用制限チェック
+   * @returns {boolean} 生成可能かどうか
+   */
+  checkUsageLimits() {
+    const isAuthenticated = this.authService.isAuthenticated()
+    
+    if (isAuthenticated) {
+      // ログインユーザーは無制限
+      return true
+    }
+    
+    if (!this.usageManager) {
+      console.warn("[AppService] UsageManager not available, allowing generation")
+      return true
+    }
+    
+    const canGenerate = this.usageManager.canGuestGenerate()
+    
+    if (!canGenerate) {
+      this.showUsageLimitError()
+      return false
+    }
+    
+    return true
+  }
+  
+  /**
+   * 使用制限エラーを表示
+   */
+  showUsageLimitError() {
+    const errorMessage = "本日の無料利用回数を超えました。無制限利用にはログインしてください。"
+    alert(errorMessage)
+  }
+  
+  /**
+   * ゲスト利用を記録
+   */
+  recordGuestUsage() {
+    if (this.usageManager && !this.authService.isAuthenticated()) {
+      this.usageManager.recordGuestUsage()
+      // 使用制限を再更新
+      this.updateUsageLimits(false)
+    }
   }
 }
 
@@ -1252,139 +1381,3 @@ document.addEventListener('DOMContentLoaded', async () => {
 })
 
 console.log('📋 タップカルテ - リファクタリング版JavaScript読み込み完了')
-  // ========================================
-  // 📊 使用制限システム
-  // ========================================
-  
-  /**
-   * 使用制限システムを初期化
-   */
-  initializeUsageControl() {
-    if (!this.usageManager) {
-      console.warn('[AppService] UsageManager not available')
-      return
-    }
-    
-    // 認証状態変更時の使用制限更新
-    this.authService.addAuthListener((isAuthenticated) => {
-      this.updateUsageLimits(isAuthenticated)
-    })
-    
-    // 初期状態の使用制限を設定
-    this.updateUsageLimits(this.authService.isAuthenticated())
-    
-    console.log('[AppService] Usage control initialized')
-  }
-  
-  /**
-   * 使用制限の状態を更新
-   * @param {boolean} isAuthenticated ログイン状態
-   */
-  updateUsageLimits(isAuthenticated) {
-    const generateBtn = document.getElementById('generate-btn')
-    const authMessage = document.getElementById('auth-required-message')
-    const usageMessage = this.getOrCreateUsageLimitMessage()
-    
-    if (isAuthenticated) {
-      // ログインユーザー: 無制限
-      if (generateBtn) {
-        generateBtn.disabled = false
-        generateBtn.classList.remove('opacity-50', 'cursor-not-allowed')
-        generateBtn.classList.add('hover:bg-pink-700')
-      }
-      if (authMessage) authMessage.style.display = 'none'
-      if (usageMessage) usageMessage.style.display = 'none'
-      
-      console.log('[AppService] Unlimited access enabled for authenticated user')
-      
-    } else {
-      // 非ログインユーザー: 1日1回制限
-      const canGenerate = this.usageManager.canGuestGenerate()
-      
-      if (generateBtn) {
-        generateBtn.disabled = !canGenerate
-        if (canGenerate) {
-          generateBtn.classList.remove('opacity-50', 'cursor-not-allowed')
-          generateBtn.classList.add('hover:bg-pink-700')
-        } else {
-          generateBtn.classList.add('opacity-50', 'cursor-not-allowed')
-          generateBtn.classList.remove('hover:bg-pink-700')
-        }
-      }
-      
-      if (authMessage) authMessage.style.display = 'none'
-      
-      if (usageMessage) {
-        if (canGenerate) {
-          usageMessage.style.display = 'none'
-        } else {
-          usageMessage.style.display = 'block'
-          usageMessage.innerHTML = `
-            <div class="flex items-center space-x-2">
-              <i class="fas fa-clock text-red-600"></i>
-              <span class="text-sm font-semibold text-red-700">本日の無料利用回数を超えました</span>
-            </div>
-            <p class="text-sm text-red-600 mt-1">
-              新規ユーザーは1日1回まで無料でご利用いただけます。無制限利用にはログインが必要です。
-            </p>
-          `
-        }
-      }
-      
-      console.log('[AppService] Guest usage limits updated:', { canGenerate })
-    }
-  }
-  
-  /**
-   * 使用制限メッセージ要素を取得または作成
-   * @returns {HTMLElement} 使用制限メッセージ要素
-   */
-  getOrCreateUsageLimitMessage() {
-    return document.getElementById('usage-limit-message')
-  }
-  
-  /**
-   * 生成実行時の使用制限チェック
-   * @returns {boolean} 生成可能かどうか
-   */
-  checkUsageLimits() {
-    const isAuthenticated = this.authService.isAuthenticated()
-    
-    if (isAuthenticated) {
-      // ログインユーザーは無制限
-      return true
-    }
-    
-    if (!this.usageManager) {
-      console.warn('[AppService] UsageManager not available, allowing generation')
-      return true
-    }
-    
-    const canGenerate = this.usageManager.canGuestGenerate()
-    
-    if (!canGenerate) {
-      this.showUsageLimitError()
-      return false
-    }
-    
-    return true
-  }
-  
-  /**
-   * 使用制限エラーを表示
-   */
-  showUsageLimitError() {
-    const errorMessage = '本日の無料利用回数を超えました。無制限利用にはログインしてください。'
-    alert(errorMessage)
-  }
-  
-  /**
-   * ゲスト利用を記録
-   */
-  recordGuestUsage() {
-    if (this.usageManager && !this.authService.isAuthenticated()) {
-      this.usageManager.recordGuestUsage()
-      // 使用制限を再更新
-      this.updateUsageLimits(false)
-    }
-  }
