@@ -425,21 +425,19 @@ const InputAreaComponent = () => (
     </div>
     
     <div className="flex justify-between items-center">
-      <div className="flex space-x-2">
-        <button 
-          id="generate-btn" 
-          disabled
-          className="px-6 py-2 bg-pink-600 text-white rounded-lg transition-colors opacity-50 cursor-not-allowed disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          生成
-        </button>
-        <button 
-          id="clear-input" 
-          className="px-4 py-2 bg-pink-400 text-white rounded-lg hover:bg-pink-500 transition-colors"
-        >
-          クリア
-        </button>
-      </div>
+      <button 
+        id="generate-btn" 
+        disabled
+        className="px-6 py-2 bg-pink-600 text-white rounded-lg transition-colors opacity-50 cursor-not-allowed disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        生成
+      </button>
+      <button 
+        id="clear-input" 
+        className="px-4 py-2 bg-pink-400 text-white rounded-lg hover:bg-pink-500 transition-colors"
+      >
+        クリア
+      </button>
     </div>
   </div>
 )
@@ -479,24 +477,24 @@ const OutputAreaComponent = () => (
     
     <div className="flex justify-between items-center">
       <div className="flex items-center space-x-2">
-        <div id="loading" className="hidden flex items-center space-x-2 text-pink-600">
+        <button 
+          id="copy-btn" 
+          className="flex items-center space-x-2 px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
+          disabled
+        >
+          <i className="fas fa-copy"></i>
+          <span>コピー</span>
+        </button>
+        <div id="loading" className="hidden flex items-center space-x-2 text-pink-600 ml-2">
           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-pink-600"></div>
           <span>処理中...</span>
         </div>
-        <button 
-          id="clear-output" 
-          className="px-4 py-2 bg-pink-400 text-white rounded-lg hover:bg-pink-500 transition-colors"
-        >
-          クリア
-        </button>
       </div>
       <button 
-        id="copy-btn" 
-        className="flex items-center space-x-2 px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
-        disabled
+        id="clear-output" 
+        className="px-4 py-2 bg-pink-400 text-white rounded-lg hover:bg-pink-500 transition-colors"
       >
-        <i className="fas fa-copy"></i>
-        <span>コピー</span>
+        クリア
       </button>
     </div>
   </div>
