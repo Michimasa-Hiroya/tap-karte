@@ -178,7 +178,7 @@ export class UsageManager {
       remainingCount,
       isLimitReached,
       message: isLimitReached 
-        ? '本日の利用回数を超えました。ログインすると無制限でご利用いただけます。'
+        ? '本日の利用回数を超えました。ログインすると無制限で利用可能。'
         : `残り ${remainingCount} 回ご利用いただけます（本日分）`
     }
   }

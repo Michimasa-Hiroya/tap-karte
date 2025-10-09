@@ -1926,13 +1926,11 @@ class AppService {
           // 利用可能な場合：利用制限の説明を表示
           usageMessage.innerHTML = `
             <div class="text-center">
-              <p class="text-sm text-pink-600 mb-2">
+              <p class="text-xs text-pink-600">
                 <i class="fas fa-info-circle mr-1"></i>
-                <strong>利用制限:</strong> 新規ユーザーは1日1回まで利用可能
-              </p>
-              <p class="text-sm text-pink-700 font-medium">
-                <i class="fas fa-key mr-1"></i>
-                ログインすると<strong>無制限</strong>でご利用いただけます
+                <strong>利用制限:</strong> 新規ユーザーは1日1回まで利用可能 
+                <i class="fas fa-key mx-1"></i>
+                ログインすると<strong>無制限で利用可能</strong>
               </p>
             </div>
           `
@@ -1956,13 +1954,11 @@ class AppService {
               </div>
             </div>
             <div class="text-center">
-              <p class="text-sm text-red-600 mb-2">
+              <p class="text-xs text-red-600">
                 <i class="fas fa-info-circle mr-1"></i>
-                <strong>利用制限:</strong> 新規ユーザーは1日1回まで利用可能
-              </p>
-              <p class="text-sm text-orange-600 font-medium">
-                <i class="fas fa-key mr-1"></i>
-                ログインすると<strong>無制限</strong>でご利用いただけます
+                <strong>利用制限:</strong> 新規ユーザーは1日1回まで利用可能 
+                <i class="fas fa-key mx-1"></i>
+                ログインすると<strong>無制限で利用可能</strong>
               </p>
             </div>
           `
@@ -1997,7 +1993,7 @@ class AppService {
    * 使用制限エラー表示
    */
   showUsageLimitError() {
-    const errorMessage = "本日の利用回数を超えました。\n\n利用制限: 新規ユーザーは1日1回まで利用可能\nログインすると無制限でご利用いただけます。"
+    const errorMessage = "本日の利用回数を超えました。\n\n利用制限: 新規ユーザーは1日1回まで利用可能 ログインすると無制限で利用可能"
     alert(errorMessage)
   }
   

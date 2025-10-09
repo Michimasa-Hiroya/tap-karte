@@ -214,7 +214,7 @@ class TapKarteApp {
       // 使用制限チェック
       const usageCheck = this.usageManager.checkUsageLimit(this.authService.isAuthenticated())
       if (!usageCheck.canGenerate) {
-        alert('本日の利用回数を超えました。ログインすると無制限でご利用いただけます。')
+        alert('本日の利用回数を超えました。ログインすると無制限で利用可能。')
         return
       }
 
