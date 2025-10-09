@@ -190,10 +190,10 @@ const UserStatusComponent = () => (
         </div>
         <button 
           id="logout-btn" 
-          className="px-1 py-1 text-pink-600 hover:text-pink-800 hover:bg-pink-50 rounded text-xs transition-colors flex items-center"
+          className="px-1 py-1 text-pink-600 hover:text-pink-800 hover:bg-pink-50 rounded transition-colors flex items-center"
         >
-          <i className="fas fa-sign-out-alt text-xs"></i>
-          <span className="ml-1 text-xs">ログアウト</span>
+          <i className="fas fa-sign-out-alt" style="font-size: 10px;"></i>
+          <span className="ml-1" style="font-size: 10px;">ログアウト</span>
         </button>
       </div>
     </div>
