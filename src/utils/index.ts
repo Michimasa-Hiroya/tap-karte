@@ -396,31 +396,12 @@ import { SECURITY_CONFIG, ENVIRONMENT_INFO } from '../config'
  * @returns デモユーザー情報
  */
 export const generateDemoUser = (): User => {
-  const demoUsers = [
-    {
-      name: '田中 花子',
-      email: 'demo.nurse01@example.com',
-      picture: 'https://page.gensparksite.com/v1/base64_upload/e0e0839ca795c5577a86e6b90d5285a3'
-    },
-    {
-      name: '佐藤 美咲',
-      email: 'demo.nurse02@example.com', 
-      picture: 'https://page.gensparksite.com/v1/base64_upload/e0e0839ca795c5577a86e6b90d5285a3'
-    },
-    {
-      name: 'ユーザー1',
-      email: 'demo.nurse03@example.com',
-      picture: 'https://page.gensparksite.com/v1/base64_upload/e0e0839ca795c5577a86e6b90d5285a3'
-    }
-  ]
-  
-  const randomUser = demoUsers[Math.floor(Math.random() * demoUsers.length)]
-  
+  // ユーザー名を「ユーザー」で統一
   return {
     id: generateId(),
-    name: randomUser.name,
-    email: randomUser.email,
-    picture: randomUser.picture
+    name: 'ユーザー',
+    email: 'demo.user@example.com',
+    picture: 'https://page.gensparksite.com/v1/base64_upload/e0e0839ca795c5577a86e6b90d5285a3'
   }
 }
 
