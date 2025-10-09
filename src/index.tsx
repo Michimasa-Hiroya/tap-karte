@@ -312,7 +312,7 @@ const OptionsBarComponent = () => (
         看護記録の作成設定
       </h2>
       <p className="text-sm text-pink-700">
-        病院・施設の<strong>電子カルテシステム</strong>や<strong>看護業務</strong>に応じた書式を選択
+        看護業務に応じた書式を選択
       </p>
     </div>
     
@@ -419,9 +419,7 @@ const InputAreaComponent = () => (
         <span id="input-count" className="text-sm text-pink-600">0文字</span>
       </div>
       
-      <p className="text-sm text-pink-700 mb-3">
-        看護の内容を自然な文章で入力してください。
-      </p>
+
       
       <SecurityWarningComponent />
       
