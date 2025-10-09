@@ -9,7 +9,7 @@ export const renderer = jsxRenderer(({ children }) => {
         <title>タップカルテ - 思ったことを、そのままカルテに</title>
         
         {/* 🔒 セキュリティ強化メタタグ */}
-        <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' https: data:; font-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self';" />
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' https: data:; font-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self';" />
         <meta http-equiv="X-Content-Type-Options" content="nosniff" />
         {/* X-Frame-Options is set via HTTP headers in security middleware */}
         <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
