@@ -625,8 +625,8 @@ class AuthComponent {
       this.elements.headerUserInfo.style.display = 'flex'
     }
     
-    // 生成ボタンを有効化し、認証メッセージを非表示
-    this.enableGenerationButton()
+    // 生成ボタン制御はAppService.updateUsageLimitsに委譲
+    // this.enableGenerationButton()
   }
 
   /**
@@ -648,8 +648,8 @@ class AuthComponent {
       this.elements.headerUserInfo.style.display = 'none'
     }
     
-    // 生成ボタンを無効化し、認証メッセージを表示
-    this.disableGenerationButton()
+    // 生成ボタン制御はAppService.updateUsageLimitsに委譲
+    // this.disableGenerationButton()
   }
 
   // ========================================
@@ -820,20 +820,23 @@ class AppService {
     try {
       console.log('[AppService] Starting application initialization...')
       
-      // 認証UIコンポーネントを初期化
-      this.authComponent.initialize()
-      
       // 保存された認証情報をロード
       this.authService.loadStoredAuth()
+      
+      // 使用制限システムを初期化（認証UIより先に）
+      this.initializeUsageControl()
+      
+      // 認証UIコンポーネントを初期化
+      this.authComponent.initialize()
       
       // 変換フォームを初期化
       this.initializeConversionForm()
       
-      // 使用制限システムを初期化
-      this.initializeUsageControl()
-      
       // 履歴を初期化
       this.initializeHistory()
+      
+      // その他のUI要素を初期化
+      this.initializeOtherElements()
       
       this.state.initialized = true
       console.log('[AppService] Application initialization completed')
@@ -848,12 +851,12 @@ class AppService {
    * 変換フォームを初期化
    */
   initializeConversionForm() {
-    const form = document.getElementById('conversionForm')
-    const textInput = document.getElementById('textInput')
-    const convertBtn = document.getElementById('convertBtn')
+    const textInput = document.getElementById('input-text')
+    const generateBtn = document.getElementById('generate-btn')
     
-    if (form && textInput && convertBtn) {
-      form.addEventListener('submit', async (e) => {
+    if (textInput && generateBtn) {
+      // 生成ボタンのクリックイベント
+      generateBtn.addEventListener('click', async (e) => {
         e.preventDefault()
         await this.handleConversion()
       })
@@ -864,6 +867,11 @@ class AppService {
       })
       
       console.log('[AppService] Conversion form initialized')
+    } else {
+      console.error('[AppService] Required elements not found:', {
+        textInput: !!textInput,
+        generateBtn: !!generateBtn
+      })
     }
   }
 
@@ -900,7 +908,7 @@ class AppService {
     }
     
     try {
-      const textInput = document.getElementById('textInput')
+      const textInput = document.getElementById('input-text')
       const text = textInput?.value?.trim()
       
       if (!text) {
@@ -943,9 +951,20 @@ class AppService {
       
       const result = await response.json()
       
-      if (result.success) {
+      if (result.success && result.data) {
+        // APIレスポンス構造に合わせて変換結果を準備
+        const convertedText = result.data.result || ''
+        const responseTime = result.data.responseTime || 0
+        
+        // 変換結果オブジェクトを構築
+        const conversionResult = {
+          converted_text: convertedText,
+          suggestions: [], // 現在のAPIは提案機能なし
+          response_time: responseTime
+        }
+        
         // 変換結果を表示
-        this.displayConversionResult(result)
+        this.displayConversionResult(conversionResult)
         
         // ゲスト使用を記録
         this.recordGuestUsage()
@@ -954,8 +973,8 @@ class AppService {
         this.addToHistory({
           id: Date.now(),
           originalText: text,
-          convertedText: result.converted_text,
-          suggestions: result.suggestions,
+          convertedText: convertedText,
+          suggestions: [],
           timestamp: new Date().toISOString(),
           user: this.authService.getCurrentUser()
         })
@@ -966,7 +985,7 @@ class AppService {
         
         console.log('[AppService] AI conversion completed successfully')
       } else {
-        throw new Error(result.message || '変換処理でエラーが発生しました')
+        throw new Error(result.error || 'AIサービスから正常な応答が得られませんでした')
       }
       
     } catch (error) {
@@ -1055,19 +1074,19 @@ class AppService {
    * 文字数カウントを更新
    */
   updateCharacterCount() {
-    const textInput = document.getElementById('textInput')
-    const charCount = document.getElementById('charCount')
+    const textInput = document.getElementById('input-text')
+    const charCount = document.getElementById('input-count')
     
     if (textInput && charCount) {
       const length = textInput.value.length
-      charCount.textContent = `${length}/1000文字`
+      charCount.textContent = `${length}文字`
       
       // 文字数制限の視覚的フィードバック
       if (length > 1000) {
         charCount.classList.add('text-red-500')
-        charCount.classList.remove('text-gray-500')
+        charCount.classList.remove('text-pink-600')
       } else {
-        charCount.classList.add('text-gray-500')
+        charCount.classList.add('text-pink-600')
         charCount.classList.remove('text-red-500')
       }
     }
@@ -1100,14 +1119,14 @@ class AppService {
    * @param {boolean} loading ローディング状態
    */
   setConversionLoadingState(loading) {
-    const convertBtn = document.getElementById('convertBtn')
-    const textInput = document.getElementById('textInput')
+    const generateBtn = document.getElementById('generate-btn')
+    const textInput = document.getElementById('input-text')
     
-    if (convertBtn) {
-      convertBtn.disabled = loading
-      convertBtn.innerHTML = loading 
-        ? '<i class="fas fa-spinner fa-spin mr-2"></i>変換中...' 
-        : '<i class="fas fa-magic mr-2"></i>カルテに変換'
+    if (generateBtn) {
+      generateBtn.disabled = loading
+      generateBtn.innerHTML = loading 
+        ? '<i class="fas fa-spinner fa-spin mr-2"></i>生成中...' 
+        : '生成'
     }
     
     if (textInput) {
@@ -1152,7 +1171,7 @@ class AppService {
     const item = this.state.conversionHistory.find(h => h.id === itemId)
     if (!item) return
     
-    const textInput = document.getElementById('textInput')
+    const textInput = document.getElementById('input-text')
     if (textInput) {
       textInput.value = item.originalText
       this.updateCharacterCount()
@@ -1204,6 +1223,33 @@ class AppService {
     }
 
   }
+
+  /**
+   * その他のUI要素を初期化
+   */
+  initializeOtherElements() {
+    // クリアボタンの初期化
+    const clearBtn = document.getElementById('clear-input')
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        this.clearInput()
+      })
+      console.log('[AppService] Clear button initialized')
+    }
+  }
+
+  /**
+   * 入力をクリア
+   */
+  clearInput() {
+    const textInput = document.getElementById('input-text')
+    if (textInput) {
+      textInput.value = ''
+      this.updateCharacterCount()
+      textInput.focus()
+    }
+  }
+
   // ========================================
   // 📊 使用制限システム
   // ========================================
@@ -1241,8 +1287,8 @@ class AppService {
       // ログインユーザー: 無制限
       if (generateBtn) {
         generateBtn.disabled = false
-        generateBtn.classList.remove("opacity-50", "cursor-not-allowed")
-        generateBtn.classList.add("hover:bg-pink-700")
+        generateBtn.classList.remove("opacity-50", "cursor-not-allowed", "bg-gray-400")
+        generateBtn.classList.add("hover:bg-pink-700", "bg-pink-600")
       }
       if (authMessage) authMessage.style.display = "none"
       if (usageMessage) usageMessage.style.display = "none"
@@ -1256,14 +1302,15 @@ class AppService {
       if (generateBtn) {
         generateBtn.disabled = !canGenerate
         if (canGenerate) {
-          generateBtn.classList.remove("opacity-50", "cursor-not-allowed")
-          generateBtn.classList.add("hover:bg-pink-700")
+          generateBtn.classList.remove("opacity-50", "cursor-not-allowed", "bg-gray-400")
+          generateBtn.classList.add("hover:bg-pink-700", "bg-pink-600")
         } else {
-          generateBtn.classList.add("opacity-50", "cursor-not-allowed")
-          generateBtn.classList.remove("hover:bg-pink-700")
+          generateBtn.classList.add("opacity-50", "cursor-not-allowed", "bg-gray-400")
+          generateBtn.classList.remove("hover:bg-pink-700", "bg-pink-600")
         }
       }
       
+      // ゲストユーザーは認証メッセージを非表示（使用制限メッセージを使用）
       if (authMessage) authMessage.style.display = "none"
       
       if (usageMessage) {
