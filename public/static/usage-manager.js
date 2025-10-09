@@ -85,14 +85,18 @@ class UsageManager {
   }
 
   /**
-   * 今日の日付を取得（YYYY-MM-DD形式）
+   * 今日の日付を取得（YYYY-MM-DD形式、日本時間基準）
    * @returns {string} 今日の日付
    */
   getTodayDate() {
+    // 日本時間（JST）で日付を取得
     const today = new Date()
-    return today.getFullYear() + '-' + 
-           String(today.getMonth() + 1).padStart(2, '0') + '-' + 
-           String(today.getDate()).padStart(2, '0')
+    const jstOffset = 9 * 60 * 60 * 1000 // JST = UTC+9
+    const jstDate = new Date(today.getTime() + jstOffset)
+    
+    return jstDate.getUTCFullYear() + '-' + 
+           String(jstDate.getUTCMonth() + 1).padStart(2, '0') + '-' + 
+           String(jstDate.getUTCDate()).padStart(2, '0')
   }
 
   /**
@@ -151,6 +155,25 @@ class UsageManager {
       canGuestGenerate: this.canGuestGenerate(),
       todayDate: this.getTodayDate()
     }
+  }
+
+  /**
+   * 日付リセットのテスト（デバッグ用）
+   * 前日の日付で使用記録を設定
+   */
+  testDateReset() {
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    const yesterdayString = yesterday.getFullYear() + '-' + 
+           String(yesterday.getMonth() + 1).padStart(2, '0') + '-' + 
+           String(yesterday.getDate()).padStart(2, '0')
+    
+    this.usageData.lastUsageDate = yesterdayString
+    this.usageData.usageCount = 1
+    this.saveUsageData()
+    
+    console.log('[UsageManager] Test date reset - set yesterday as last usage:', yesterdayString)
+    console.log('[UsageManager] Can generate today?', this.canGuestGenerate())
   }
 }
 // UsageManagerをグローバルに公開

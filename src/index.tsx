@@ -576,8 +576,8 @@ const PrivacyPolicyComponent = () => (
  * フッターコンポーネント（将来の拡張用）
  */
 const FooterComponent = () => (
-  <footer className="mt-16 py-8 text-center text-pink-600 text-sm">
-    <p>🏥 医療従事者の皆様の業務効率化をサポートします</p>
+  <footer className="mt-16 py-8">
+    {/* フッターコンテンツを削除 */}
   </footer>
 )
 
