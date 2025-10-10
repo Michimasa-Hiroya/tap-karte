@@ -477,7 +477,7 @@ const OutputAreaComponent = () => (
   <div className="p-6">
     <div className="mb-4">
       <div className="flex justify-between items-center mb-2">
-        <label className="block text-base font-bold text-pink-800 flex items-center">
+        <label className="block text-sm font-bold text-pink-800 flex items-center">
           <i className="fas fa-file-medical text-pink-600 mr-2"></i>
           生成された看護記録・医療文書
         </label>
@@ -509,7 +509,7 @@ const OutputAreaComponent = () => (
         </button>
         <div id="loading" className="hidden flex items-center space-x-2 text-pink-600 ml-2">
           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-pink-600"></div>
-          <span>看護記録を生成中...</span>
+          <span>生成中...</span>
         </div>
       </div>
       <button 
