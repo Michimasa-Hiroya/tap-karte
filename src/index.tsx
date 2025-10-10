@@ -462,10 +462,10 @@ const SecurityWarningComponent = () => (
   <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-md">
     <div className="flex items-center space-x-2">
       <i className="fas fa-exclamation-triangle text-red-500"></i>
-      <span className="text-sm font-semibold text-red-700">注意</span>
+      <span className="text-base font-semibold text-red-700">警告</span>
     </div>
-    <div className="text-sm text-red-600 mt-1">
-      <p>個人情報(氏名や住所など)や個人が特定できる情報、珍しい病名などの入力は禁止します。</p>
+    <div className="text-base text-red-600 mt-1">
+      <p>個人情報(氏名や年齢、住所など)や個人が特定できる情報(病院名や施設名、個人の特徴など)、珍しい病名などの入力は禁止します。</p>
     </div>
   </div>
 )
