@@ -426,7 +426,7 @@ const InputAreaComponent = () => (
       <textarea 
         id="input-text"
         className="w-full h-80 p-4 border border-pink-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-        placeholder="・「バイタル測定した」「薬を服薬させた」など自然な表現でOK&#10;・箇条書きやメモ書きでも大丈夫&#10;・音声入力にも対応・誤字脱字は自動で修正"
+        placeholder="・「バイタル測定した」「口の体操をした」など自然な表現でOK&#10;・箇条書きやメモ書きでも大丈夫&#10;・音声入力にも対応・誤字脱字は自動で修正"
       ></textarea>
     </div>
     
