@@ -62,6 +62,16 @@ class TapKarteDashboard {
         // その他のボタン
         this.clearAllBtn = document.getElementById('clear-all-btn');
         this.usageLimitMessage = document.getElementById('usage-limit-message');
+        
+        // 認証関連要素
+        this.loginBtn = document.getElementById('login-btn');
+        this.authModal = document.getElementById('auth-modal');
+        this.closeModalBtn = document.getElementById('close-modal');
+        this.loginForm = document.getElementById('login-form');
+        this.loginPassword = document.getElementById('login-password');
+        this.loginErrorMessage = document.getElementById('login-error-message');
+        this.loginBtnText = document.getElementById('login-btn-text');
+        this.loginSpinner = document.getElementById('login-spinner');
     }
     
     /**
@@ -110,6 +120,12 @@ class TapKarteDashboard {
         // 新しいボタン
         document.getElementById('clear-input-btn')?.addEventListener('click', () => this.clearInput());
         document.getElementById('clear-output-btn')?.addEventListener('click', () => this.clearOutput());
+        
+        // 認証関連
+        this.attachAuthListeners();
+        
+        // ログアウトボタン
+        document.getElementById('logout-btn')?.addEventListener('click', () => this.handleLogout());
         
         // 初期文字数カウント
         this.updateQuickInputCount();
@@ -622,6 +638,186 @@ class TapKarteDashboard {
     generateSessionId() {
         this.currentSessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         console.log('Session ID generated:', this.currentSessionId);
+    }
+    
+    /**
+     * 🔐 認証関連イベントリスナー
+     */
+    attachAuthListeners() {
+        // ログインボタン
+        if (this.loginBtn) {
+            this.loginBtn.addEventListener('click', () => this.openLoginModal());
+        }
+        
+        // モーダル閉じるボタン
+        if (this.closeModalBtn) {
+            this.closeModalBtn.addEventListener('click', () => this.closeLoginModal());
+        }
+        
+        // モーダル背景クリックで閉じる
+        if (this.authModal) {
+            this.authModal.addEventListener('click', (e) => {
+                if (e.target === this.authModal) {
+                    this.closeLoginModal();
+                }
+            });
+        }
+        
+        // ログインフォーム送信
+        if (this.loginForm) {
+            this.loginForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.handleLogin();
+            });
+        }
+        
+        // Escキーでモーダルを閉じる
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !this.authModal.classList.contains('hidden')) {
+                this.closeLoginModal();
+            }
+        });
+    }
+    
+    /**
+     * 🔓 ログインモーダルを開く
+     */
+    openLoginModal() {
+        if (this.authModal) {
+            this.authModal.classList.remove('hidden');
+            if (this.loginPassword) {
+                this.loginPassword.focus();
+            }
+        }
+    }
+    
+    /**
+     * 🔒 ログインモーダルを閉じる
+     */
+    closeLoginModal() {
+        if (this.authModal) {
+            this.authModal.classList.add('hidden');
+            this.clearLoginForm();
+        }
+    }
+    
+    /**
+     * 🧹 ログインフォームをクリア
+     */
+    clearLoginForm() {
+        if (this.loginPassword) {
+            this.loginPassword.value = '';
+        }
+        if (this.loginErrorMessage) {
+            this.loginErrorMessage.classList.add('hidden');
+        }
+    }
+    
+    /**
+     * 🔑 ログイン処理
+     */
+    async handleLogin() {
+        const password = this.loginPassword?.value?.trim();
+        
+        if (!password) {
+            this.showLoginError('パスワードを入力してください');
+            return;
+        }
+        
+        // ローディング開始
+        this.setLoginLoading(true);
+        
+        try {
+            // デモ用：簡単なパスワード認証
+            // 本番環境では適切な認証APIを使用してください
+            const isValidPassword = password === 'tapkarte2024' || password === 'demo';
+            
+            if (isValidPassword) {
+                // 認証成功
+                this.showMessage('ログインしました', 'success');
+                this.closeLoginModal();
+                
+                // UI更新（ログイン状態に変更）
+                this.updateAuthUI(true, { name: 'ゲストユーザー' });
+                
+            } else {
+                this.showLoginError('パスワードが正しくありません');
+            }
+            
+        } catch (error) {
+            console.error('Login error:', error);
+            this.showLoginError('ログインに失敗しました');
+        } finally {
+            this.setLoginLoading(false);
+        }
+    }
+    
+    /**
+     * 🚨 ログインエラー表示
+     */
+    showLoginError(message) {
+        if (this.loginErrorMessage) {
+            this.loginErrorMessage.textContent = message;
+            this.loginErrorMessage.classList.remove('hidden');
+        }
+    }
+    
+    /**
+     * ⏳ ログインローディング状態設定
+     */
+    setLoginLoading(loading) {
+        if (this.loginBtnText) {
+            this.loginBtnText.style.display = loading ? 'none' : 'inline';
+        }
+        if (this.loginSpinner) {
+            this.loginSpinner.classList.toggle('hidden', !loading);
+        }
+        if (this.loginForm) {
+            const submitBtn = this.loginForm.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = loading;
+            }
+        }
+    }
+    
+    /**
+     * 👤 認証UI更新
+     */
+    updateAuthUI(isLoggedIn, user = null) {
+        const userStatus = document.getElementById('user-status');
+        const authButtons = document.getElementById('auth-buttons');
+        
+        if (isLoggedIn && user) {
+            // ログイン状態のUI
+            if (userStatus) {
+                userStatus.classList.remove('hidden');
+                const userName = userStatus.querySelector('#user-name');
+                if (userName) {
+                    userName.textContent = user.name || 'ユーザー';
+                }
+            }
+            if (authButtons) {
+                authButtons.classList.add('hidden');
+            }
+        } else {
+            // 未ログイン状態のUI
+            if (userStatus) {
+                userStatus.classList.add('hidden');
+            }
+            if (authButtons) {
+                authButtons.classList.remove('hidden');
+            }
+        }
+    }
+    
+    /**
+     * 🚪 ログアウト処理
+     */
+    handleLogout() {
+        if (confirm('ログアウトしますか？')) {
+            this.showMessage('ログアウトしました', 'info');
+            this.updateAuthUI(false);
+        }
     }
 }
 
