@@ -16,12 +16,18 @@ class TapKarteDashboard {
         this.currentCharLimit = 500;        // 文字数制限
         this.currentSessionId = null;
         
+        // 利用制限関連
+        this.isLoggedIn = false;            // ログイン状態
+        this.dailyUsageCount = 0;           // 本日の利用回数
+        this.maxDailyUsage = 1;             // 新規ユーザーの1日制限
+        
         // 🚀 初期化実行
         this.initializeElements();
         this.attachEventListeners();
         this.initializeAccordions();
         this.initializeTemplates();
         this.generateSessionId();
+        this.checkUsageLimit();
     }
     
     /**
@@ -417,12 +423,21 @@ class TapKarteDashboard {
     checkGenerateButton() {
         if (this.quickInputText && this.quickGenerateBtn) {
             const hasText = this.quickInputText.value.trim().length > 0;
-            this.quickGenerateBtn.disabled = !hasText;
             
-            if (hasText) {
+            // 利用制限チェック（新規ユーザーのみ）
+            const isLimitReached = !this.isLoggedIn && this.dailyUsageCount >= this.maxDailyUsage;
+            
+            // テキストがあり、かつ制限に達していない場合のみ有効
+            const shouldEnable = hasText && !isLimitReached;
+            
+            this.quickGenerateBtn.disabled = !shouldEnable;
+            
+            if (shouldEnable) {
                 this.quickGenerateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                this.quickGenerateBtn.classList.add('hover:bg-pink-700');
             } else {
                 this.quickGenerateBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                this.quickGenerateBtn.classList.remove('hover:bg-pink-700');
             }
         }
     }
@@ -484,6 +499,9 @@ class TapKarteDashboard {
                 if (this.copyBtn) {
                     this.copyBtn.disabled = false;
                 }
+                
+                // 利用回数を記録（新規ユーザーのみ）
+                this.recordUsage();
                 
                 this.showMessage('変換が完了しました', 'success');
             } else {
@@ -737,8 +755,14 @@ class TapKarteDashboard {
                 this.showMessage('ログインしました', 'success');
                 this.closeLoginModal();
                 
+                // ログイン状態を更新
+                this.isLoggedIn = true;
+                
                 // UI更新（ログイン状態に変更）
                 this.updateAuthUI(true, { name: 'ゲストユーザー' });
+                
+                // 利用制限を解除
+                this.checkUsageLimit();
                 
             } else {
                 this.showLoginError('パスワードが正しくありません');
@@ -816,8 +840,100 @@ class TapKarteDashboard {
     handleLogout() {
         if (confirm('ログアウトしますか？')) {
             this.showMessage('ログアウトしました', 'info');
+            this.isLoggedIn = false;
             this.updateAuthUI(false);
+            this.checkUsageLimit(); // ログアウト後に制限を再確認
         }
+    }
+    
+    /**
+     * 📊 利用制限チェック
+     */
+    checkUsageLimit() {
+        if (this.isLoggedIn) {
+            // ログイン済みユーザーは無制限
+            this.enableGeneration();
+            return;
+        }
+        
+        // 新規ユーザー（未ログイン）の制限をチェック
+        const today = new Date().toDateString();
+        const storedData = localStorage.getItem('tapkarte_usage');
+        
+        if (storedData) {
+            const usageData = JSON.parse(storedData);
+            if (usageData.date === today) {
+                this.dailyUsageCount = usageData.count || 0;
+            } else {
+                // 日付が変わった場合はリセット
+                this.dailyUsageCount = 0;
+                localStorage.setItem('tapkarte_usage', JSON.stringify({
+                    date: today,
+                    count: 0
+                }));
+            }
+        } else {
+            // 初回利用
+            this.dailyUsageCount = 0;
+            localStorage.setItem('tapkarte_usage', JSON.stringify({
+                date: today,
+                count: 0
+            }));
+        }
+        
+        // 制限チェック
+        if (this.dailyUsageCount >= this.maxDailyUsage) {
+            this.disableGeneration();
+        } else {
+            this.enableGeneration();
+        }
+    }
+    
+    /**
+     * ✅ 生成機能を有効化
+     */
+    enableGeneration() {
+        if (this.quickGenerateBtn) {
+            this.quickGenerateBtn.disabled = false;
+            this.quickGenerateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            this.quickGenerateBtn.classList.add('hover:bg-pink-700');
+        }
+    }
+    
+    /**
+     * ❌ 生成機能を無効化（制限到達時）
+     */
+    disableGeneration() {
+        if (this.quickGenerateBtn) {
+            this.quickGenerateBtn.disabled = true;
+            this.quickGenerateBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            this.quickGenerateBtn.classList.remove('hover:bg-pink-700');
+        }
+        
+        // 制限メッセージを表示
+        this.showMessage('本日の利用制限に達しました。ログインすると無制限でご利用いただけます。', 'warning');
+    }
+    
+    /**
+     * 📈 利用回数を記録
+     */
+    recordUsage() {
+        if (this.isLoggedIn) {
+            // ログインユーザーは記録不要
+            return;
+        }
+        
+        // 新規ユーザーの利用回数を増加
+        this.dailyUsageCount++;
+        const today = new Date().toDateString();
+        
+        localStorage.setItem('tapkarte_usage', JSON.stringify({
+            date: today,
+            count: this.dailyUsageCount
+        }));
+        
+        // 制限チェック
+        this.checkUsageLimit();
     }
 }
 
