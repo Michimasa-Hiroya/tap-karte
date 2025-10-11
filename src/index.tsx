@@ -608,14 +608,14 @@ const TemplateAccordion = () => (
       </div>
       
       {/* 選択されたテンプレート表示 */}
-      <div id="selected-templates" className="hidden mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
+      <div id="selected-templates" className="hidden mt-3 p-3 bg-pink-50 border border-pink-200 rounded">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-semibold text-blue-800">選択中のテンプレート:</span>
-          <button id="clear-templates" className="text-blue-600 hover:text-blue-800 text-sm">
+          <span className="text-sm font-semibold text-pink-800">選択中のテンプレート:</span>
+          <button id="clear-templates" className="text-pink-600 hover:text-pink-800 text-sm">
             <i className="fas fa-times"></i> すべてクリア
           </button>
         </div>
-        <div id="selected-template-list" className="text-sm text-blue-700 space-y-1"></div>
+        <div id="selected-template-list" className="text-sm text-pink-700 space-y-1"></div>
       </div>
     </div>
   </div>

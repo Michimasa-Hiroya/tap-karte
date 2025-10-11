@@ -323,7 +323,7 @@ class TapKarteDashboard {
                 this.selectedTemplateList.innerHTML = this.selectedTemplates
                     .map(template => `<div class="flex items-center justify-between py-1">
                         <span>• ${template}</span>
-                        <button onclick="window.tapKarte.removeTemplateFromDisplay('${template}')" class="text-blue-600 hover:text-blue-800 ml-2">
+                        <button onclick="window.tapKarte.removeTemplateFromDisplay('${template}')" class="text-pink-600 hover:text-pink-800 ml-2">
                             <i class="fas fa-times text-xs"></i>
                         </button>
                     </div>`)
@@ -593,7 +593,7 @@ class TapKarteDashboard {
         const colors = {
             success: 'text-green-600',
             error: 'text-red-600',
-            info: 'text-blue-600',
+            info: 'text-pink-600',
             warning: 'text-yellow-600'
         };
         
