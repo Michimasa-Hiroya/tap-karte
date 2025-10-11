@@ -186,7 +186,7 @@ function extractConversionRequest(body: any): {
 
   // 新しい形式 { text, options } の場合
   if (options && typeof options === 'object') {
-    const { format: optFormat, style: optStyle, include_suggestions, charLimit: optCharLimit } = options
+    const { format: optFormat, style: optStyle, include_suggestions, charLimit: optCharLimit, docType: optDocType, template, templates } = options
     
     return {
       success: true,
@@ -197,8 +197,10 @@ function extractConversionRequest(body: any): {
           style: optStyle || 'professional',
           include_suggestions: include_suggestions !== false,
           // 従来フォーマットへのマッピング
-          docType: optFormat === 'report' ? '報告書' : '記録',
-          charLimit: optCharLimit || AI_CONFIG.defaultCharLimit
+          docType: optDocType || (optFormat === 'report' ? '報告書' : '記録'),
+          charLimit: optCharLimit || AI_CONFIG.defaultCharLimit,
+          template: template || null, // 単一テンプレート（後方互換性）
+          templates: templates || [] // 複数テンプレート（新機能）
         }
       }
     }
@@ -377,21 +379,40 @@ function buildConversionPrompt(
   options: ConversionRequest['options'],
   medicalTermsContext: string
 ): string {
-  const { style, docType, format, charLimit } = options
+  const { style, docType, format, charLimit, template, templates } = options
+
+  // テンプレート用コンテキストの準備
+  let templateContext = ''
+  
+  // 新しい複数テンプレート機能を優先
+  if (templates && Array.isArray(templates) && templates.length > 0) {
+    templateContext = `
+【業務内容テンプレート】
+この記録は「${templates.join('、')}」に関する内容として整理してください。これらの業務内容に関連する専門的な観点から記録を作成してください。
+`
+  } 
+  // 従来の単一テンプレート（後方互換性）
+  else if (template) {
+    templateContext = `
+【業務内容テンプレート】
+この記録は「${template}」に関する内容として整理してください。この業務内容に関連する専門的な観点から記録を作成してください。
+`
+  }
 
   // 報告書の場合の特別な指示
   if (docType === '報告書') {
     return `あなたは経験豊富な一流の看護師と理学療法士です。以下の口頭メモや簡潔なメモを、適切な${docType}として整理してください。
-
+${templateContext}
 【重要な指示】
 1. 入力内容のみに基づいて記録を作成し、勝手な情報は追加しない
-2. ${style}で統一する
-3. ${format}で出力する
-4. 出力は${charLimit}文字以内に収める
-5. 以下の医療用語辞書を参考にして、適切な専門用語を使用する
-6. 自然な時系列順で読みやすく整理する
-7. あなたの専門的視点から情報を整理・分析し、主治医にとっては医学的判断の材料となり、ケアマネジャーにとってはケアプランの見直しに資する情報となるよう、論理的で分かりやすい文章を作成してください。
-8. 誤字脱字は、医療・介護の専門用語を用いて適切に修正します。
+2. 入力文字数が少ない場合（30文字未満）は決して創作や推測で内容を膨らませない
+3. ${style}で統一する
+4. ${format}で出力する
+5. 出力は${charLimit}文字以内に収める
+6. 以下の医療用語辞書を参考にして、適切な専門用語を使用する
+7. 自然な時系列順で読みやすく整理する
+8. あなたの専門的視点から情報を整理・分析し、主治医にとっては医学的判断の材料となり、ケアマネジャーにとってはケアプランの見直しに資する情報となるよう、論理的で分かりやすい文章を作成してください。
+9. 誤字脱字は、医療・介護の専門用語を用いて適切に修正します。
 
 【医療用語辞書】
 ${medicalTermsContext}
@@ -404,16 +425,17 @@ ${text}
 
   // 記録の場合（訪問看護記録書向け指示）
   return `あなたは経験豊富な一流の看護師と理学療法士です。以下の口頭メモや簡潔なメモを、適切な${docType}として整理してください。
-
+${templateContext}
 【重要な指示】
 1. 入力内容のみに基づいて記録を作成し、勝手な情報は追加しない
-2. ${style}で統一する
-3. ${format}で出力する
-4. 出力は${charLimit}文字以内に収める
-5. 以下の医療用語辞書を参考にして、適切な専門用語を使用する
-6. 自然な時系列順で読みやすく整理する
-7. 入力された日常会話的な文章やメモを、公式な医療記録である「訪問看護記録書」として、客観的かつ専門的な文章に書き換えてください。
-8. 誤字脱字は、医療・介護の専門用語を用いて適切に修正します。
+2. 入力文字数が少ない場合（30文字未満）は決して創作や推測で内容を膨らませない
+3. ${style}で統一する
+4. ${format}で出力する
+5. 出力は${charLimit}文字以内に収める
+6. 以下の医療用語辞書を参考にして、適切な専門用語を使用する
+7. 自然な時系列順で読みやすく整理する
+8. 入力された日常会話的な文章やメモを、公式な医療記録である「訪問看護記録書」として、客観的かつ専門的な文章に書き換えてください。
+9. 誤字脱字は、医療・介護の専門用語を用いて適切に修正します。
 
 【医療用語辞書】
 ${medicalTermsContext}
@@ -466,14 +488,11 @@ function generateDemoResponse(inputText: string): string {
   const currentTime = new Date().toLocaleString('ja-JP')
   
   // 入力テキストの長さに基づいてレスポンスを調整
-  if (inputText.length < 10) {
+  if (inputText.length < 30) {
     return `【看護記録】
-本日 ${currentTime}
-患者より「${inputText}」との訴えあり。
-バイタルサインに著変なく、経過観察とする。
-引き続き患者の状態を注意深く観察していく。
+${inputText}について記録した。
 
-※これはデモ機能です。実際のAI変換には環境設定が必要です。`
+※これはデモ機能です。短い入力には詳細な記録は生成されません。`
   }
   
   return `【看護記録】

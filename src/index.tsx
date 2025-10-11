@@ -292,235 +292,379 @@ const MainContentComponent = () => (
 )
 
 /**
- * AI変換インターフェースコンポーネント
+ * AI変換インターフェースコンポーネント - ダッシュボード形式
  */
 const ConversionInterfaceComponent = () => (
   <div className="bg-white rounded-lg shadow-lg overflow-hidden border border-pink-200">
-    <OptionsBarComponent />
-    <InputOutputAreaComponent />
+    {/* 🎯 入力開始エリア（アコーディオン設定を含む） */}
+    <QuickStartInputComponent />
+    
+    {/* 📝 出力エリア */}
+    <DashboardInputOutputComponent />
   </div>
 )
 
 /**
- * オプション設定バーコンポーネント（SEO最適化済み）
+ * 🚀 看護・リハ内容の入力エリア（ダッシュボード形式）
  */
-const OptionsBarComponent = () => (
-  <div className="bg-pink-50 px-6 py-4 border-b border-pink-200">
-    <div className="mb-4">
-      <h2 className="text-lg font-bold text-pink-800 mb-2 flex items-center">
-        <i className="fas fa-cogs text-pink-600 mr-2"></i>
-        看護記録の作成設定
+const QuickStartInputComponent = () => (
+  <div className="bg-gradient-to-r from-pink-50 to-white px-6 py-6 border-b border-pink-200">
+    <div className="text-center mb-6">
+      <h2 className="text-2xl font-bold text-pink-800 mb-4 flex items-center justify-center">
+        <i className="fas fa-edit text-pink-600 mr-3"></i>
+        看護・リハ内容の入力
       </h2>
-      <p className="text-sm text-pink-700">
-        看護業務に応じた書式を選択
-      </p>
     </div>
     
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <OptionGroupComponent 
-        title="医療文書種別"
-        options={[
-          { id: "doc-record", label: "看護記録", active: true },
-          { id: "doc-report", label: "報告書", active: false }
-        ]}
-      />
-      
-      <OptionGroupComponent 
-        title="記録フォーマット"
-        options={[
-          { id: "format-text", label: "文章形式", active: true },
-          { id: "format-soap", label: "SOAP形式", active: false }
-        ]}
-      />
-      
-      <OptionGroupComponent 
-        title="医療記録文体"
-        options={[
-          { id: "style-plain", label: "だ・である体", active: true },
-          { id: "style-polite", label: "ですます体", active: false }
-        ]}
-      />
-    </div>
+    {/* ⚙️ アコーディオン設定メニューをここに移動 */}
+    <AccordionSettingsComponent />
     
-    <CharacterLimitSliderComponent />
-  </div>
-)
-
-/**
- * オプショングループコンポーネント
- */
-const OptionGroupComponent = ({ title, options }: { title: string; options: Array<{id: string; label: string; active: boolean}> }) => (
-  <div className="space-y-2">
-    <label className="text-sm font-semibold text-pink-800">{title}</label>
-    <div className="flex space-x-2">
-      {options.map(option => (
-        <button 
-          key={option.id}
-          id={option.id} 
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            option.active 
-              ? 'bg-pink-600 text-white hover:bg-pink-700'
-              : 'bg-pink-100 text-pink-700 hover:bg-pink-200'
-          }`}
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
-  </div>
-)
-
-/**
- * 文字数制限スライダーコンポーネント
- */
-const CharacterLimitSliderComponent = () => (
-  <div className="mt-4">
-    <div className="flex items-center justify-between mb-2">
-      <label className="text-sm font-semibold text-pink-800">出力文字数制限</label>
-      <span id="char-limit-display" className="text-sm text-pink-700 font-medium">500文字</span>
-    </div>
-    <div className="flex items-center space-x-4">
-      <span className="text-xs text-pink-600">100</span>
-      <input 
-        type="range" 
-        id="char-limit-slider" 
-        min="100" 
-        max="1000" 
-        step="50" 
-        value="500"
-        className="flex-1 h-2 bg-pink-200 rounded-lg appearance-none cursor-pointer slider-pink"
-      />
-      <span className="text-xs text-pink-600">1000</span>
-    </div>
-  </div>
-)
-
-/**
- * 入力・出力エリアコンポーネント
- */
-const InputOutputAreaComponent = () => (
-  <div className="grid grid-cols-1 lg:grid-cols-2">
-    <InputAreaComponent />
-    <OutputAreaComponent />
-  </div>
-)
-
-/**
- * 入力エリアコンポーネント（SEO最適化済み）
- */
-const InputAreaComponent = () => (
-  <div className="p-6 border-r border-pink-200">
-    <div className="mb-4">
-      <div className="flex justify-between items-center mb-2">
-        <label className="block text-base font-bold text-pink-800 flex items-center">
-          <i className="fas fa-edit text-pink-600 mr-2"></i>
-          看護内容の入力
-        </label>
-        <span id="input-count" className="text-sm text-pink-600">0文字</span>
+    {/* 🎯 メイン入力エリア */}
+    <div className="mt-6 mb-6">
+      {/* 個人情報保護警告 - 入力欄のすぐ上 */}
+      <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+        <div className="flex items-center space-x-2">
+          <i className="fas fa-exclamation-triangle text-red-500"></i>
+          <span className="text-sm font-semibold text-red-700">注意</span>
+        </div>
+        <p className="text-sm text-red-600 mt-1">
+          個人情報(氏名や年齢、住所など)や個人が特定できる情報(病院名・施設名、個人の特徴など)、珍しい病名などの入力は禁止します。
+        </p>
+      </div>
+      
+      <div className="relative">
+        <textarea 
+          id="quick-input-text"
+          className="w-full h-60 p-4 text-base border-2 border-pink-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-pink-200 focus:border-pink-500 transition-all"
+          placeholder="・「バイタル測定した」「口の体操をした」など自然な表現でOK&#10;・簡潔書きでもメモ書きでも大丈夫&#10;・音声入力にも対応・誤字脱字は自動で修正"
+        ></textarea>
+        <div className="absolute bottom-3 right-3">
+          <span id="quick-input-count" className="text-sm text-pink-600 bg-white px-2 py-1 rounded-full shadow-sm">0文字</span>
+        </div>
       </div>
       
 
       
-      <SecurityWarningComponent />
+      {/* ボタンエリア */}
+      <div className="flex justify-between items-center mt-4">
+        <button 
+          id="quick-generate-btn" 
+          className="px-8 py-3 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-all font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled
+        >
+          生成
+        </button>
+        
+        <button 
+          id="clear-input-btn" 
+          className="px-6 py-3 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors font-medium"
+        >
+          クリア
+        </button>
+      </div>
       
-      <textarea 
-        id="input-text"
-        className="w-full h-80 p-4 border border-pink-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent"
-        placeholder="・「バイタル測定した」「口の体操をした」など自然な表現でOK&#10;・箇条書きやメモ書きでも大丈夫&#10;・音声入力にも対応・誤字脱字は自動で修正"
-      ></textarea>
-    </div>
-    
-    {/* 使用制限・認証メッセージ（入力欄と生成ボタンの間に配置） */}
-    
-    {/* 使用制限メッセージ - Safari対応版 */}
-    <div id="usage-limit-message" className="mb-4 p-4 bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-lg shadow-sm" style={{display: 'none'}}>
-      {/* 動的に内容が更新されます */}
-    </div>
-    
-    <div className="flex justify-between items-center">
-      <button 
-        id="generate-btn" 
-        disabled
-        className="px-6 py-2 bg-pink-600 text-white rounded-lg transition-colors opacity-50 cursor-not-allowed disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        生成
-      </button>
-      <button 
-        id="clear-input" 
-        className="px-4 py-2 bg-pink-400 text-white rounded-lg hover:bg-pink-500 transition-colors"
-      >
-        クリア
-      </button>
+      {/* 利用制限メッセージ */}
+      <div className="mt-3 p-2 bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-lg">
+        <div className="flex items-center justify-center space-x-2">
+          <i className="fas fa-info-circle text-red-500 text-xs"></i>
+          <span className="text-xs text-red-600">利用制限: 新規ユーザーは1日1回まで利用可能 | ログインすると無制限で利用可能</span>
+        </div>
+      </div>
     </div>
   </div>
 )
 
 /**
- * セキュリティ警告コンポーネント
+ * ⚙️ アコーディオン設定メニュー
  */
-const SecurityWarningComponent = () => (
-  <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-md">
-    <div className="flex items-center space-x-2">
-      <i className="fas fa-exclamation-triangle text-red-500"></i>
-      <span className="text-base font-semibold text-red-700">警告</span>
-    </div>
-    <div className="text-base text-red-600 mt-1">
-      <p>個人情報(氏名や年齢、住所など)や個人が特定できる情報(病院名や施設名、個人の特徴など)、珍しい病名などの入力は禁止します。</p>
+const AccordionSettingsComponent = () => (
+  <div className="mb-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* 文章設定アコーディオン */}
+      <DocumentSettingsAccordion />
+      
+      {/* テンプレートアコーディオン */}
+      <TemplateAccordion />
     </div>
   </div>
 )
 
 /**
- * 出力エリアコンポーネント（SEO最適化済み）
+ * 📄 文章設定アコーディオン
  */
-const OutputAreaComponent = () => (
-  <div className="p-6">
-    <div className="mb-4">
-      <div className="flex justify-between items-center mb-2">
-        <label className="block text-sm font-bold text-pink-800 flex items-center">
+const DocumentSettingsAccordion = () => (
+  <div className="border border-pink-200 rounded-lg">
+    <button 
+      id="document-settings-toggle"
+      className="w-full px-4 py-3 bg-pink-50 hover:bg-pink-100 transition-colors flex items-center justify-between text-left rounded-t-lg"
+    >
+      <div className="flex items-center">
+        <i className="fas fa-cog text-pink-600 mr-2"></i>
+        <span className="font-semibold text-pink-800">文章設定</span>
+
+      </div>
+      <i id="document-settings-icon" className="fas fa-chevron-down text-pink-600 transform transition-transform"></i>
+    </button>
+    
+    <div id="document-settings-content" className="hidden px-4 py-4 space-y-4">
+      {/* ドキュメント種別 */}
+      <div>
+        <label className="block text-sm font-semibold text-pink-800 mb-2">記録種別</label>
+        <div className="flex space-x-2">
+          <button id="doc-record" className="px-3 py-2 bg-pink-600 text-white rounded-md text-sm font-medium transition-colors">
+            記録
+          </button>
+          <button id="doc-report" className="px-3 py-2 bg-pink-100 text-pink-700 hover:bg-pink-200 rounded-md text-sm font-medium transition-colors">
+            報告書
+          </button>
+        </div>
+      </div>
+      
+      {/* フォーマット */}
+      <div>
+        <label className="block text-sm font-semibold text-pink-800 mb-2">フォーマット</label>
+        <div className="flex space-x-2">
+          <button id="format-text" className="px-3 py-2 bg-pink-600 text-white rounded-md text-sm font-medium transition-colors">
+            文章形式
+          </button>
+          <button id="format-soap" className="px-3 py-2 bg-pink-100 text-pink-700 hover:bg-pink-200 rounded-md text-sm font-medium transition-colors">
+            SOAP形式
+          </button>
+        </div>
+      </div>
+      
+      {/* 文体 */}
+      <div>
+        <label className="block text-sm font-semibold text-pink-800 mb-2">文体</label>
+        <div className="flex space-x-2">
+          <button id="style-plain" className="px-3 py-2 bg-pink-600 text-white rounded-md text-sm font-medium transition-colors">
+            だ・である体
+          </button>
+          <button id="style-polite" className="px-3 py-2 bg-pink-100 text-pink-700 hover:bg-pink-200 rounded-md text-sm font-medium transition-colors">
+            ですます体
+          </button>
+        </div>
+      </div>
+      
+      {/* 文字数制限 */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm font-semibold text-pink-800">出力文字数</label>
+          <span id="char-limit-display" className="text-sm text-pink-700 font-medium">500文字</span>
+        </div>
+        <div className="flex items-center space-x-3">
+          <span className="text-xs text-pink-600">100</span>
+          <input 
+            type="range" 
+            id="char-limit-slider" 
+            min="100" 
+            max="1000" 
+            step="50" 
+            value="500"
+            className="flex-1 h-2 bg-pink-200 rounded-lg appearance-none cursor-pointer"
+          />
+          <span className="text-xs text-pink-600">1000</span>
+        </div>
+      </div>
+    </div>
+  </div>
+)
+
+/**
+ * 📝 テンプレートアコーディオン
+ */
+const TemplateAccordion = () => (
+  <div className="border border-pink-200 rounded-lg">
+    <button 
+      id="template-toggle"
+      className="w-full px-4 py-3 bg-pink-50 hover:bg-pink-100 transition-colors flex items-center justify-between text-left rounded-t-lg"
+    >
+      <div className="flex items-center">
+        <i className="fas fa-clipboard-list text-pink-600 mr-2"></i>
+        <span className="font-semibold text-pink-800">テンプレート</span>
+        <span className="text-sm text-pink-600 ml-2">(業務内容別)</span>
+      </div>
+      <i id="template-icon" className="fas fa-chevron-down text-pink-600 transform transition-transform"></i>
+    </button>
+    
+    <div id="template-content" className="hidden px-4 py-4 space-y-4">
+      {/* 職種選択 */}
+      <div>
+        <label className="block text-sm font-semibold text-pink-800 mb-2">職種</label>
+        <div className="flex space-x-2">
+          <button id="template-nurse" className="px-3 py-2 bg-pink-600 text-white rounded-md text-sm font-medium transition-colors">
+            看護師
+          </button>
+          <button id="template-rehab" className="px-3 py-2 bg-pink-100 text-pink-700 hover:bg-pink-200 rounded-md text-sm font-medium transition-colors">
+            リハ職
+          </button>
+        </div>
+      </div>
+      
+      {/* 看護師テンプレート */}
+      <div id="nurse-templates">
+        <label className="block text-sm font-semibold text-pink-800 mb-2">看護業務テンプレート</label>
+        <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto">
+          <label className="flex items-center space-x-3 p-2 hover:bg-pink-50 rounded cursor-pointer">
+            <input type="checkbox" className="template-checkbox w-4 h-4" data-template="バイタル測定" />
+            <span className="text-base text-pink-700">バイタル測定</span>
+          </label>
+          <label className="flex items-center space-x-3 p-2 hover:bg-pink-50 rounded cursor-pointer">
+            <input type="checkbox" className="template-checkbox w-4 h-4" data-template="症状・状態観察" />
+            <span className="text-base text-pink-700">症状・状態観察</span>
+          </label>
+          <label className="flex items-center space-x-3 p-2 hover:bg-pink-50 rounded cursor-pointer">
+            <input type="checkbox" className="template-checkbox w-4 h-4" data-template="内服管理・指導" />
+            <span className="text-base text-pink-700">内服管理・指導</span>
+          </label>
+          <label className="flex items-center space-x-3 p-2 hover:bg-pink-50 rounded cursor-pointer">
+            <input type="checkbox" className="template-checkbox w-4 h-4" data-template="清拭・入浴介助" />
+            <span className="text-base text-pink-700">清拭・入浴介助</span>
+          </label>
+          <label className="flex items-center space-x-3 p-2 hover:bg-pink-50 rounded cursor-pointer">
+            <input type="checkbox" className="template-checkbox w-4 h-4" data-template="排泄ケア" />
+            <span className="text-base text-pink-700">排泄ケア</span>
+          </label>
+          <label className="flex items-center space-x-3 p-2 hover:bg-pink-50 rounded cursor-pointer">
+            <input type="checkbox" className="template-checkbox w-4 h-4" data-template="食事・水分摂取" />
+            <span className="text-base text-pink-700">食事・水分摂取</span>
+          </label>
+          <label className="flex items-center space-x-3 p-2 hover:bg-pink-50 rounded cursor-pointer">
+            <input type="checkbox" className="template-checkbox w-4 h-4" data-template="点滴" />
+            <span className="text-base text-pink-700">点滴</span>
+          </label>
+          <label className="flex items-center space-x-3 p-2 hover:bg-pink-50 rounded cursor-pointer">
+            <input type="checkbox" className="template-checkbox w-4 h-4" data-template="創傷処置" />
+            <span className="text-base text-pink-700">創傷処置</span>
+          </label>
+          <label className="flex items-center space-x-3 p-2 hover:bg-pink-50 rounded cursor-pointer">
+            <input type="checkbox" className="template-checkbox w-4 h-4" data-template="精神・心理状態の観察" />
+            <span className="text-base text-pink-700">精神・心理状態の観察</span>
+          </label>
+          <label className="flex items-center space-x-3 p-2 hover:bg-pink-50 rounded cursor-pointer">
+            <input type="checkbox" className="template-checkbox w-4 h-4" data-template="家族への指導・相談対応" />
+            <span className="text-base text-pink-700">家族への指導・相談対応</span>
+          </label>
+        </div>
+      </div>
+      
+      {/* リハビリテーション職テンプレート */}
+      <div id="rehab-templates" className="hidden">
+        <label className="block text-sm font-semibold text-pink-800 mb-2">リハビリ業務テンプレート</label>
+        <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto">
+          <label className="flex items-center space-x-3 p-2 hover:bg-pink-50 rounded cursor-pointer">
+            <input type="checkbox" className="template-checkbox w-4 h-4" data-template="バイタル測定" />
+            <span className="text-base text-pink-700">バイタル測定</span>
+          </label>
+          <label className="flex items-center space-x-3 p-2 hover:bg-pink-50 rounded cursor-pointer">
+            <input type="checkbox" className="template-checkbox w-4 h-4" data-template="歩行訓練" />
+            <span className="text-base text-pink-700">歩行訓練</span>
+          </label>
+          <label className="flex items-center space-x-3 p-2 hover:bg-pink-50 rounded cursor-pointer">
+            <input type="checkbox" className="template-checkbox w-4 h-4" data-template="関節可動域訓練" />
+            <span className="text-base text-pink-700">関節可動域訓練</span>
+          </label>
+          <label className="flex items-center space-x-3 p-2 hover:bg-pink-50 rounded cursor-pointer">
+            <input type="checkbox" className="template-checkbox w-4 h-4" data-template="筋力トレーニング" />
+            <span className="text-base text-pink-700">筋力トレーニング</span>
+          </label>
+          <label className="flex items-center space-x-3 p-2 hover:bg-pink-50 rounded cursor-pointer">
+            <input type="checkbox" className="template-checkbox w-4 h-4" data-template="ADL訓練" />
+            <span className="text-base text-pink-700">ADL訓練</span>
+          </label>
+          <label className="flex items-center space-x-3 p-2 hover:bg-pink-50 rounded cursor-pointer">
+            <input type="checkbox" className="template-checkbox w-4 h-4" data-template="移乗動作訓練" />
+            <span className="text-base text-pink-700">移乗動作訓練</span>
+          </label>
+          <label className="flex items-center space-x-3 p-2 hover:bg-pink-50 rounded cursor-pointer">
+            <input type="checkbox" className="template-checkbox w-4 h-4" data-template="立ち上がり動作訓練" />
+            <span className="text-base text-pink-700">立ち上がり動作訓練</span>
+          </label>
+          <label className="flex items-center space-x-3 p-2 hover:bg-pink-50 rounded cursor-pointer">
+            <input type="checkbox" className="template-checkbox w-4 h-4" data-template="起居動作訓練" />
+            <span className="text-base text-pink-700">起居動作訓練</span>
+          </label>
+          <label className="flex items-center space-x-3 p-2 hover:bg-pink-50 rounded cursor-pointer">
+            <input type="checkbox" className="template-checkbox w-4 h-4" data-template="福祉用具評価" />
+            <span className="text-base text-pink-700">福祉用具評価</span>
+          </label>
+          <label className="flex items-center space-x-3 p-2 hover:bg-pink-50 rounded cursor-pointer">
+            <input type="checkbox" className="template-checkbox w-4 h-4" data-template="住環境評価" />
+            <span className="text-base text-pink-700">住環境評価</span>
+          </label>
+          <label className="flex items-center space-x-3 p-2 hover:bg-pink-50 rounded cursor-pointer">
+            <input type="checkbox" className="template-checkbox w-4 h-4" data-template="自主トレーニング指導" />
+            <span className="text-base text-pink-700">自主トレーニング指導</span>
+          </label>
+          <label className="flex items-center space-x-3 p-2 hover:bg-pink-50 rounded cursor-pointer">
+            <input type="checkbox" className="template-checkbox w-4 h-4" data-template="家族への介助指導" />
+            <span className="text-base text-pink-700">家族への介助指導</span>
+          </label>
+        </div>
+      </div>
+      
+      {/* 選択されたテンプレート表示 */}
+      <div id="selected-templates" className="hidden mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-semibold text-blue-800">選択中のテンプレート:</span>
+          <button id="clear-templates" className="text-blue-600 hover:text-blue-800 text-sm">
+            <i className="fas fa-times"></i> すべてクリア
+          </button>
+        </div>
+        <div id="selected-template-list" className="text-sm text-blue-700 space-y-1"></div>
+      </div>
+    </div>
+  </div>
+)
+
+/**
+ * 📝 ダッシュボード出力エリア
+ */
+const DashboardInputOutputComponent = () => (
+  <div className="p-6 border-t border-pink-200">
+    {/* 出力エリア */}
+    <div className="mb-6">
+      <div className="flex justify-between items-center mb-3">
+        <label className="block text-base font-bold text-pink-800 flex items-center">
           <i className="fas fa-file-medical text-pink-600 mr-2"></i>
           生成された看護記録・医療文書
         </label>
         <span id="output-count" className="text-sm text-pink-600">0文字</span>
       </div>
       
-
-      
       <div 
         id="output-text"
-        className="w-full h-80 p-4 bg-pink-25 border border-pink-300 rounded-lg overflow-y-auto whitespace-pre-wrap"
+        className="w-full min-h-96 p-6 bg-gradient-to-br from-pink-25 to-white border-2 border-pink-300 rounded-lg overflow-y-auto whitespace-pre-wrap shadow-inner"
       >
-        <div className="text-pink-400 italic">
-          看護記録・医療文書がここに自動生成されます。
+        <div className="text-pink-400 italic text-center mt-32">
+          <i className="fas fa-magic text-3xl mb-3 block"></i>
+          生成された記録はここに表示されます
         </div>
       </div>
-    </div>
-    
-    <div className="flex justify-between items-center">
-      <div className="flex items-center space-x-2">
+      
+      {/* 出力エリア下のボタン */}
+      <div className="flex justify-between items-center mt-4">
         <button 
           id="copy-btn" 
-          className="flex items-center space-x-2 px-4 py-2 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
+          className="px-6 py-3 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
           disabled
-          title="コピー＆ペースト"
         >
-          <i className="fas fa-copy"></i>
-          <span>コピー</span>
+          <i className="fas fa-copy mr-2"></i>
+          コピー
         </button>
-        <div id="loading" className="hidden flex items-center space-x-2 text-pink-600 ml-2">
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-pink-600"></div>
-          <span>生成中...</span>
-        </div>
+        
+        <button 
+          id="clear-output-btn" 
+          className="px-6 py-3 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors font-medium"
+        >
+          クリア
+        </button>
       </div>
-      <button 
-        id="clear-output" 
-        className="px-4 py-2 bg-pink-400 text-white rounded-lg hover:bg-pink-500 transition-colors"
-      >
-        クリア
-      </button>
     </div>
   </div>
 )
+
+
 
 /**
  * 使用ガイドコンポーネント（SEO最適化済み）
@@ -794,7 +938,7 @@ const FooterComponent = () => (
  */
 const ScriptComponents = () => (
   <>
-    <script type="module" src="/static/app-modular.js"></script>
+    <script type="module" src="/static/app-dashboard.js"></script>
   </>
 )
 

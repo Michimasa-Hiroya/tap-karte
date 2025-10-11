@@ -27,6 +27,10 @@ export interface ConversionOptions {
   style: StyleType
   /** 文字数制限 */
   charLimit: number
+  /** テンプレート情報（業務内容別） */
+  template?: string | null
+  /** テンプレート情報（複数選択対応） */
+  templates?: string[]
 }
 
 /** 変換リクエスト */
@@ -225,6 +229,10 @@ export interface SelectedOptions {
   format: FormatType
   /** 文体種別 */
   style: StyleType
+  /** テンプレート情報（業務内容別） */
+  template?: string | null
+  /** テンプレート情報（複数選択対応） */
+  templates?: string[]
 }
 
 /** 使用制限データ */
