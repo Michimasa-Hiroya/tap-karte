@@ -364,10 +364,14 @@ const QuickStartInputComponent = () => (
       </div>
       
       {/* 利用制限メッセージ */}
-      <div className="mt-3 p-2 bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 rounded-lg">
-        <div className="flex items-center justify-center space-x-2">
-          <i className="fas fa-info-circle text-red-500 text-xs"></i>
-          <span className="text-xs text-red-600">利用制限: 新規ユーザーは1日1回まで利用可能 | ログインすると無制限で利用可能</span>
+      <div className="mt-3 p-3 bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-lg shadow-sm">
+        <div className="flex items-center space-x-2">
+          <i className="fas fa-info-circle text-red-500"></i>
+          <span className="text-sm font-semibold text-red-700">利用制限: 新規ユーザーは1日1回まで利用可能</span>
+        </div>
+        <div className="flex items-center space-x-2 mt-1">
+          <i className="fas fa-key text-pink-500"></i>
+          <span className="text-sm text-pink-700">ログインすると無制限で利用可能</span>
         </div>
       </div>
     </div>
@@ -638,7 +642,7 @@ const DashboardInputOutputComponent = () => (
       >
         <div className="text-pink-400 italic text-center mt-32">
           <i className="fas fa-magic text-3xl mb-3 block"></i>
-          生成された記録はここに表示されます
+          <span className="text-sm">生成された記録はここに表示されます</span>
         </div>
       </div>
       
