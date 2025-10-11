@@ -730,7 +730,7 @@ class TapKarteDashboard {
         try {
             // デモ用：簡単なパスワード認証
             // 本番環境では適切な認証APIを使用してください
-            const isValidPassword = password === 'tapkarte2024' || password === 'demo';
+            const isValidPassword = password === '656110';
             
             if (isValidPassword) {
                 // 認証成功
