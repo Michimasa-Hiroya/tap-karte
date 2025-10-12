@@ -503,6 +503,9 @@ class TapKarteDashboard {
                 // 利用回数を記録（新規ユーザーのみ）
                 this.recordUsage();
                 
+                // テンプレートをリセット
+                this.resetTemplatesAfterGeneration();
+                
                 this.showMessage('変換が完了しました', 'success');
             } else {
                 throw new Error(data.error || '変換に失敗しました');
@@ -571,11 +574,14 @@ class TapKarteDashboard {
      * 🗑️ 入力のみクリア
      */
     clearInput() {
-        if (this.quickInputText) {
-            this.quickInputText.value = '';
-            this.updateQuickInputCount();
-            this.checkGenerateButton();
-            this.showMessage('入力内容をクリアしました', 'info');
+        // 確認ダイアログを表示
+        if (confirm('入力内容をクリアしますか？')) {
+            if (this.quickInputText) {
+                this.quickInputText.value = '';
+                this.updateQuickInputCount();
+                this.checkGenerateButton();
+                this.showMessage('入力内容をクリアしました', 'info');
+            }
         }
     }
     
@@ -583,22 +589,25 @@ class TapKarteDashboard {
      * 🗑️ 出力のみクリア
      */
     clearOutput() {
-        if (this.outputText) {
-            this.outputText.innerHTML = `
-                <div class="text-pink-400 italic text-center mt-32">
-                    <i class="fas fa-magic text-3xl mb-3 block"></i>
-                    看護記録・医療文書がここに自動生成されます。
-                </div>
-            `;
-            this.updateOutputCount();
+        // 確認ダイアログを表示
+        if (confirm('生成された内容をクリアしますか？')) {
+            if (this.outputText) {
+                this.outputText.innerHTML = `
+                    <div class="text-pink-400 italic text-center mt-32">
+                        <i class="fas fa-magic text-3xl mb-3 block"></i>
+                        <span class="text-sm">生成された記録はここに表示されます</span>
+                    </div>
+                `;
+                this.updateOutputCount();
+            }
+            
+            // コピーボタンを無効化
+            if (this.copyBtn) {
+                this.copyBtn.disabled = true;
+            }
+            
+            this.showMessage('出力内容をクリアしました', 'info');
         }
-        
-        // コピーボタンを無効化
-        if (this.copyBtn) {
-            this.copyBtn.disabled = true;
-        }
-        
-        this.showMessage('出力内容をクリアしました', 'info');
     }
     
     /**
@@ -844,6 +853,32 @@ class TapKarteDashboard {
             this.updateAuthUI(false);
             this.checkUsageLimit(); // ログアウト後に制限を再確認
         }
+    }
+    
+    /**
+     * 🔄 生成後のテンプレートリセット
+     */
+    resetTemplatesAfterGeneration() {
+        // すべてのテンプレートチェックボックスを解除
+        const checkboxes = document.querySelectorAll('.template-checkbox');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        
+        // 選択済みテンプレートをクリア
+        this.selectedTemplates = [];
+        
+        // 選択済みテンプレート表示エリアを非表示
+        if (this.selectedTemplatesDiv) {
+            this.selectedTemplatesDiv.classList.add('hidden');
+        }
+        
+        // 表示リストをクリア
+        if (this.selectedTemplateList) {
+            this.selectedTemplateList.innerHTML = '';
+        }
+        
+        console.log('テンプレートがリセットされました');
     }
     
     /**
