@@ -316,22 +316,8 @@ const QuickStartInputComponent = () => (
       </h2>
     </div>
     
-    {/* ⚙️ アコーディオン設定メニューをここに移動 */}
-    <AccordionSettingsComponent />
-    
-    {/* 🎯 メイン入力エリア */}
-    <div className="mt-6 mb-6">
-      {/* 個人情報保護警告 - 入力欄のすぐ上 */}
-      <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-        <div className="flex items-center space-x-2">
-          <i className="fas fa-exclamation-triangle text-red-500"></i>
-          <span className="text-sm font-semibold text-red-700">注意</span>
-        </div>
-        <p className="text-sm text-red-600 mt-1">
-          個人情報(氏名や年齢、住所など)や個人が特定できる情報(病院名・施設名、個人の特徴など)、珍しい病名などの入力は禁止します。
-        </p>
-      </div>
-      
+    {/* 1. 📝 入力欄 */}
+    <div className="mb-6">
       <div className="relative">
         <textarea 
           id="quick-input-text"
@@ -342,56 +328,62 @@ const QuickStartInputComponent = () => (
           <span id="quick-input-count" className="text-sm text-pink-600 bg-white px-2 py-1 rounded-full shadow-sm">0文字</span>
         </div>
       </div>
-      
-
-      
-      {/* ボタンエリア */}
-      <div className="flex justify-between items-center mt-4">
-        <button 
-          id="quick-generate-btn" 
-          className="px-8 py-3 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-all font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled
-        >
-          生成
-        </button>
-        
-        <button 
-          id="clear-input-btn" 
-          className="px-6 py-3 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors font-medium"
-        >
-          クリア
-        </button>
-      </div>
-      
-      {/* 利用制限メッセージ */}
-      <div className="mt-3 p-3 bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-lg shadow-sm">
-        <div className="flex items-center space-x-2">
-          <i className="fas fa-info-circle text-red-500"></i>
-          <span className="text-sm font-semibold text-red-700">利用制限: 新規ユーザーは1日1回まで利用可能</span>
-        </div>
-        <div className="flex items-center space-x-2 mt-1">
-          <i className="fas fa-key text-pink-500"></i>
-          <span className="text-sm text-pink-700">ログインすると無制限で利用可能</span>
-        </div>
-      </div>
     </div>
-  </div>
-)
-
-/**
- * ⚙️ アコーディオン設定メニュー
- */
-const AccordionSettingsComponent = () => (
-  <div className="mb-4">
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {/* 文章設定アコーディオン */}
+    
+    {/* 2. ⚠️ 注意 */}
+    <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-lg">
+      <div className="flex items-center space-x-2">
+        <i className="fas fa-exclamation-triangle text-red-500"></i>
+        <span className="text-sm font-semibold text-red-700">注意</span>
+      </div>
+      <p className="text-sm text-red-600 mt-1">
+        個人情報(氏名や年齢、住所など)や個人が特定できる情報(病院名・施設名、個人の特徴など)、珍しい病名などの入力は禁止します。
+      </p>
+    </div>
+    
+    {/* 3. ⚙️ 文章設定 */}
+    <div className="mb-6">
       <DocumentSettingsAccordion />
-      
-      {/* テンプレートアコーディオン */}
+    </div>
+    
+    {/* 4. 📋 テンプレート */}
+    <div className="mb-6">
       <TemplateAccordion />
     </div>
+    
+    {/* 5. 🎯 生成ボタン・クリアボタン */}
+    <div className="flex justify-between items-center mb-4">
+      <button 
+        id="quick-generate-btn" 
+        className="px-8 py-3 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-all font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+        disabled
+      >
+        生成
+      </button>
+      
+      <button 
+        id="clear-input-btn" 
+        className="px-6 py-3 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition-colors font-medium"
+      >
+        クリア
+      </button>
+    </div>
+    
+    {/* 利用制限メッセージ */}
+    <div className="mt-3 p-3 bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-lg shadow-sm">
+      <div className="flex items-center space-x-2">
+        <i className="fas fa-info-circle text-red-500"></i>
+        <span className="text-sm font-semibold text-red-700">利用制限: 新規ユーザーは1日1回まで利用可能</span>
+      </div>
+      <div className="flex items-center space-x-2 mt-1">
+        <i className="fas fa-key text-pink-500"></i>
+        <span className="text-sm text-pink-700">ログインすると無制限で利用可能</span>
+      </div>
+    </div>
   </div>
 )
+
+
 
 /**
  * 📄 文章設定アコーディオン
