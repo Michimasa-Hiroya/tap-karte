@@ -126,7 +126,7 @@ app.get('/', (c) => {
 const MainApplicationUI = () => (
   <div className="min-h-screen bg-pink-50">
     <HeaderComponent />
-    <AuthModalComponent />
+
     <MainContentComponent />
     <FooterComponent />
     <ScriptComponents />
@@ -189,94 +189,15 @@ const HeaderComponent = () => (
 )
 
 /**
- * ユーザー状態コンポーネント
+ * ユーザー状態コンポーネント（ログイン機能削除済み）
  */
 const UserStatusComponent = () => (
   <div className="flex items-start justify-end min-w-0 flex-shrink-0">
-    {/* 認証済み表示エリア */}
-    <div id="user-status" className="hidden">
-      <div className="flex items-center space-x-2">
-        <div className="flex items-center space-x-1">
-          <img id="user-avatar" className="w-5 h-5 rounded-full" alt="Profile" />
-          <span id="user-name" className="text-pink-800 text-xs font-medium truncate max-w-20"></span>
-        </div>
-        <button 
-          id="logout-btn" 
-          className="px-1 py-1 text-pink-600 hover:text-pink-800 hover:bg-pink-50 rounded transition-colors flex items-center"
-        >
-          <i className="fas fa-sign-out-alt" style="font-size: 10px;"></i>
-          <span className="ml-1" style="font-size: 10px;">ログアウト</span>
-        </button>
-      </div>
-    </div>
-    
-    {/* 未認証表示エリア */}
-    <div id="auth-buttons">
-      <button 
-        id="login-btn" 
-        className="px-3 py-1 bg-pink-200 text-pink-800 rounded-md text-xs font-medium hover:bg-pink-300 transition-colors flex items-center space-x-1"
-      >
-        <i className="fas fa-user-circle"></i>
-        <span>ログイン</span>
-      </button>
-    </div>
+    {/* ログイン機能を削除 */}
   </div>
 )
 
-/**
- * 認証モーダルコンポーネント（レスポンシブ中央配置）
- */
-const AuthModalComponent = () => (
-  <div id="auth-modal" className="hidden fixed inset-0 bg-black bg-opacity-50 z-50">
-    <div className="flex items-center justify-center min-h-screen p-4 w-full">
-      <div className="bg-white rounded-lg w-full max-w-md mx-auto p-6 relative transform">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-pink-800">ログイン</h2>
-          <button id="close-modal" className="text-gray-500 hover:text-gray-700">
-            <i className="fas fa-times"></i>
-          </button>
-        </div>
-        
-        {/* パスワード認証フォーム */}
-        <form id="login-form" className="space-y-4 w-full">
-          <div className="text-center mb-4 w-full">
-            <i className="fas fa-lock text-4xl text-pink-500 mb-3 block"></i>
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">パスワードでログイン</h3>
-            <p className="text-sm text-gray-500">パスワードを入力してください</p>
-          </div>
-          
-          <div>
-            <label htmlFor="login-password" className="block text-sm font-medium text-gray-700 mb-2">
-              パスワード
-            </label>
-            <input
-              type="password"
-              id="login-password"
-              name="password"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
-              placeholder="パスワードを入力"
-              required
-            />
-          </div>
-          
-          {/* エラーメッセージ */}
-          <div id="login-error-message" className="hidden text-red-600 text-sm bg-red-50 border border-red-200 rounded-md p-3">
-          </div>
-          
-          <button 
-            type="submit"
-            className="w-full px-6 py-3 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-all font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <span id="login-btn-text">ログイン</span>
-            <span id="login-spinner" className="hidden inline-block w-4 h-4 ml-2 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-          </button>
-        </form>
-        
 
-      </div>
-    </div>
-  </div>
-)
 
 /**
  * メインコンテンツコンポーネント（SEO最適化済み）
@@ -370,14 +291,10 @@ const QuickStartInputComponent = () => (
     </div>
     
     {/* 利用制限メッセージ */}
-    <div className="mt-3 p-3 bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-lg shadow-sm">
+    <div className="mt-3 p-3 bg-gradient-to-r from-pink-50 to-rose-50 border-2 border-pink-200 rounded-lg shadow-sm">
       <div className="flex items-center space-x-2">
-        <i className="fas fa-info-circle text-red-500"></i>
-        <span className="text-sm font-semibold text-red-700">利用制限: 新規ユーザーは1日1回まで利用可能</span>
-      </div>
-      <div className="flex items-center space-x-2 mt-1">
-        <i className="fas fa-key text-pink-500"></i>
-        <span className="text-sm text-pink-700">ログインすると無制限で利用可能</span>
+        <i className="fas fa-info-circle text-pink-500"></i>
+        <span className="text-sm font-semibold text-pink-700">利用制限: 1日3回まで利用可能です</span>
       </div>
     </div>
   </div>
@@ -442,26 +359,7 @@ const DocumentSettingsAccordion = () => (
         </div>
       </div>
       
-      {/* 文字数制限 */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-semibold text-pink-800">出力文字数</label>
-          <span id="char-limit-display" className="text-sm text-pink-700 font-medium">500文字</span>
-        </div>
-        <div className="flex items-center space-x-3">
-          <span className="text-xs text-pink-600">100</span>
-          <input 
-            type="range" 
-            id="char-limit-slider" 
-            min="100" 
-            max="1000" 
-            step="50" 
-            value="500"
-            className="flex-1 h-2 bg-pink-200 rounded-lg appearance-none cursor-pointer"
-          />
-          <span className="text-xs text-pink-600">1000</span>
-        </div>
-      </div>
+
     </div>
   </div>
 )

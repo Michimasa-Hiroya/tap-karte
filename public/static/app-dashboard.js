@@ -17,9 +17,8 @@ class TapKarteDashboard {
         this.currentSessionId = null;
         
         // 利用制限関連
-        this.isLoggedIn = false;            // ログイン状態
         this.dailyUsageCount = 0;           // 本日の利用回数
-        this.maxDailyUsage = 1;             // 新規ユーザーの1日制限
+        this.maxDailyUsage = 3;             // 1日の利用制限（3回）
         
         // 🚀 初期化実行
         this.initializeElements();
@@ -52,9 +51,7 @@ class TapKarteDashboard {
         this.templateContent = document.getElementById('template-content');
         this.templateIcon = document.getElementById('template-icon');
         
-        // 設定要素
-        this.charLimitSlider = document.getElementById('char-limit-slider');
-        this.charLimitDisplay = document.getElementById('char-limit-display');
+        // 設定要素（文字数制限は削除）
         
         // テンプレート要素
         this.templateNurseBtn = document.getElementById('template-nurse');
@@ -68,16 +65,6 @@ class TapKarteDashboard {
         // その他のボタン
         this.clearAllBtn = document.getElementById('clear-all-btn');
         this.usageLimitMessage = document.getElementById('usage-limit-message');
-        
-        // 認証関連要素
-        this.loginBtn = document.getElementById('login-btn');
-        this.authModal = document.getElementById('auth-modal');
-        this.closeModalBtn = document.getElementById('close-modal');
-        this.loginForm = document.getElementById('login-form');
-        this.loginPassword = document.getElementById('login-password');
-        this.loginErrorMessage = document.getElementById('login-error-message');
-        this.loginBtnText = document.getElementById('login-btn-text');
-        this.loginSpinner = document.getElementById('login-spinner');
     }
     
     /**
@@ -103,10 +90,7 @@ class TapKarteDashboard {
             this.templateToggle.addEventListener('click', () => this.toggleAccordion('template'));
         }
         
-        // 文字数制限スライダー
-        if (this.charLimitSlider) {
-            this.charLimitSlider.addEventListener('input', () => this.updateCharLimit());
-        }
+        // 文字数制限機能は削除
         
         // 設定ボタン（記録種別、フォーマット、文体）
         this.attachSettingButtons();
@@ -127,11 +111,7 @@ class TapKarteDashboard {
         document.getElementById('clear-input-btn')?.addEventListener('click', () => this.clearInput());
         document.getElementById('clear-output-btn')?.addEventListener('click', () => this.clearOutput());
         
-        // 認証関連
-        this.attachAuthListeners();
-        
-        // ログアウトボタン
-        document.getElementById('logout-btn')?.addEventListener('click', () => this.handleLogout());
+        // ログイン機能は削除
         
         // 初期文字数カウント
         this.updateQuickInputCount();
@@ -385,15 +365,7 @@ class TapKarteDashboard {
         console.log('All templates cleared');
     }
     
-    /**
-     * 🔢 文字数制限の更新
-     */
-    updateCharLimit() {
-        if (this.charLimitSlider && this.charLimitDisplay) {
-            this.currentCharLimit = parseInt(this.charLimitSlider.value);
-            this.charLimitDisplay.textContent = `${this.currentCharLimit}文字`;
-        }
-    }
+
     
     /**
      * 📊 入力文字数カウント更新
@@ -424,8 +396,8 @@ class TapKarteDashboard {
         if (this.quickInputText && this.quickGenerateBtn) {
             const hasText = this.quickInputText.value.trim().length > 0;
             
-            // 利用制限チェック（新規ユーザーのみ）
-            const isLimitReached = !this.isLoggedIn && this.dailyUsageCount >= this.maxDailyUsage;
+            // 利用制限チェック
+            const isLimitReached = this.dailyUsageCount >= this.maxDailyUsage;
             
             // テキストがあり、かつ制限に達していない場合のみ有効
             const shouldEnable = hasText && !isLimitReached;
@@ -667,193 +639,7 @@ class TapKarteDashboard {
         console.log('Session ID generated:', this.currentSessionId);
     }
     
-    /**
-     * 🔐 認証関連イベントリスナー
-     */
-    attachAuthListeners() {
-        // ログインボタン
-        if (this.loginBtn) {
-            this.loginBtn.addEventListener('click', () => this.openLoginModal());
-        }
-        
-        // モーダル閉じるボタン
-        if (this.closeModalBtn) {
-            this.closeModalBtn.addEventListener('click', () => this.closeLoginModal());
-        }
-        
-        // モーダル背景クリックで閉じる
-        if (this.authModal) {
-            this.authModal.addEventListener('click', (e) => {
-                if (e.target === this.authModal) {
-                    this.closeLoginModal();
-                }
-            });
-        }
-        
-        // ログインフォーム送信
-        if (this.loginForm) {
-            this.loginForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                this.handleLogin();
-            });
-        }
-        
-        // Escキーでモーダルを閉じる
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && !this.authModal.classList.contains('hidden')) {
-                this.closeLoginModal();
-            }
-        });
-    }
-    
-    /**
-     * 🔓 ログインモーダルを開く
-     */
-    openLoginModal() {
-        if (this.authModal) {
-            this.authModal.classList.remove('hidden');
-            if (this.loginPassword) {
-                this.loginPassword.focus();
-            }
-        }
-    }
-    
-    /**
-     * 🔒 ログインモーダルを閉じる
-     */
-    closeLoginModal() {
-        if (this.authModal) {
-            this.authModal.classList.add('hidden');
-            this.clearLoginForm();
-        }
-    }
-    
-    /**
-     * 🧹 ログインフォームをクリア
-     */
-    clearLoginForm() {
-        if (this.loginPassword) {
-            this.loginPassword.value = '';
-        }
-        if (this.loginErrorMessage) {
-            this.loginErrorMessage.classList.add('hidden');
-        }
-    }
-    
-    /**
-     * 🔑 ログイン処理
-     */
-    async handleLogin() {
-        const password = this.loginPassword?.value?.trim();
-        
-        if (!password) {
-            this.showLoginError('パスワードを入力してください');
-            return;
-        }
-        
-        // ローディング開始
-        this.setLoginLoading(true);
-        
-        try {
-            // デモ用：簡単なパスワード認証
-            // 本番環境では適切な認証APIを使用してください
-            const isValidPassword = password === '656110';
-            
-            if (isValidPassword) {
-                // 認証成功
-                this.showMessage('ログインしました', 'success');
-                this.closeLoginModal();
-                
-                // ログイン状態を更新
-                this.isLoggedIn = true;
-                
-                // UI更新（ログイン状態に変更）
-                this.updateAuthUI(true, { name: 'ゲストユーザー' });
-                
-                // 利用制限を解除
-                this.checkUsageLimit();
-                
-            } else {
-                this.showLoginError('パスワードが正しくありません');
-            }
-            
-        } catch (error) {
-            console.error('Login error:', error);
-            this.showLoginError('ログインに失敗しました');
-        } finally {
-            this.setLoginLoading(false);
-        }
-    }
-    
-    /**
-     * 🚨 ログインエラー表示
-     */
-    showLoginError(message) {
-        if (this.loginErrorMessage) {
-            this.loginErrorMessage.textContent = message;
-            this.loginErrorMessage.classList.remove('hidden');
-        }
-    }
-    
-    /**
-     * ⏳ ログインローディング状態設定
-     */
-    setLoginLoading(loading) {
-        if (this.loginBtnText) {
-            this.loginBtnText.style.display = loading ? 'none' : 'inline';
-        }
-        if (this.loginSpinner) {
-            this.loginSpinner.classList.toggle('hidden', !loading);
-        }
-        if (this.loginForm) {
-            const submitBtn = this.loginForm.querySelector('button[type="submit"]');
-            if (submitBtn) {
-                submitBtn.disabled = loading;
-            }
-        }
-    }
-    
-    /**
-     * 👤 認証UI更新
-     */
-    updateAuthUI(isLoggedIn, user = null) {
-        const userStatus = document.getElementById('user-status');
-        const authButtons = document.getElementById('auth-buttons');
-        
-        if (isLoggedIn && user) {
-            // ログイン状態のUI
-            if (userStatus) {
-                userStatus.classList.remove('hidden');
-                const userName = userStatus.querySelector('#user-name');
-                if (userName) {
-                    userName.textContent = user.name || 'ユーザー';
-                }
-            }
-            if (authButtons) {
-                authButtons.classList.add('hidden');
-            }
-        } else {
-            // 未ログイン状態のUI
-            if (userStatus) {
-                userStatus.classList.add('hidden');
-            }
-            if (authButtons) {
-                authButtons.classList.remove('hidden');
-            }
-        }
-    }
-    
-    /**
-     * 🚪 ログアウト処理
-     */
-    handleLogout() {
-        if (confirm('ログアウトしますか？')) {
-            this.showMessage('ログアウトしました', 'info');
-            this.isLoggedIn = false;
-            this.updateAuthUI(false);
-            this.checkUsageLimit(); // ログアウト後に制限を再確認
-        }
-    }
+
     
     /**
      * 🔄 生成後のテンプレートリセット
@@ -885,13 +671,7 @@ class TapKarteDashboard {
      * 📊 利用制限チェック
      */
     checkUsageLimit() {
-        if (this.isLoggedIn) {
-            // ログイン済みユーザーは無制限
-            this.enableGeneration();
-            return;
-        }
-        
-        // 新規ユーザー（未ログイン）の制限をチェック
+        // 1日3回までの制限をチェック
         const today = new Date().toDateString();
         const storedData = localStorage.getItem('tapkarte_usage');
         
@@ -946,19 +726,14 @@ class TapKarteDashboard {
         }
         
         // 制限メッセージを表示
-        this.showMessage('本日の利用制限に達しました。ログインすると無制限でご利用いただけます。', 'warning');
+        this.showMessage('本日の利用制限（3回）に達しました。明日またご利用ください。', 'warning');
     }
     
     /**
      * 📈 利用回数を記録
      */
     recordUsage() {
-        if (this.isLoggedIn) {
-            // ログインユーザーは記録不要
-            return;
-        }
-        
-        // 新規ユーザーの利用回数を増加
+        // 利用回数を増加
         this.dailyUsageCount++;
         const today = new Date().toDateString();
         
